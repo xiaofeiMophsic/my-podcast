@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import androidx.core.net.toUri
 
 class PlayerController(private val context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -34,6 +35,14 @@ class PlayerController(private val context: Context) {
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     updateState(durationMs = player.duration.coerceAtLeast(0L))
                 }
+
+                override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                    updateState(
+                        title = mediaMetadata.title?.toString(),
+                        artist = mediaMetadata.artist?.toString(),
+                        imageUrl = mediaMetadata.artworkUri?.toString()
+                    )
+                }
             }
         )
 
@@ -45,17 +54,23 @@ class PlayerController(private val context: Context) {
         }
     }
 
-    fun playEpisode(episodeId: Long, title: String, url: String) {
+    fun playEpisode(episodeId: Long, title: String, url: String, artist: String? = null, imageUrl: String? = null) {
         ensureServiceStarted()
+        val mediaMetadata = MediaMetadata.Builder()
+            .setTitle(title)
+            .setArtist(artist)
+            .setArtworkUri(imageUrl?.toUri())
+            .build()
+            
         val mediaItem = MediaItem.Builder()
             .setUri(url)
             .setMediaId(episodeId.toString())
-            .setMediaMetadata(MediaMetadata.Builder().setTitle(title).build())
+            .setMediaMetadata(mediaMetadata)
             .build()
         player.setMediaItem(mediaItem)
         player.prepare()
         player.play()
-        updateState(title = title, episodeId = episodeId)
+        updateState(title = title, artist = artist, imageUrl = imageUrl, episodeId = episodeId)
     }
 
     fun play() {
@@ -77,6 +92,8 @@ class PlayerController(private val context: Context) {
     private fun updateState(
         isPlaying: Boolean? = null,
         title: String? = null,
+        artist: String? = null,
+        imageUrl: String? = null,
         positionMs: Long? = null,
         durationMs: Long? = null,
         episodeId: Long? = null,
@@ -85,6 +102,8 @@ class PlayerController(private val context: Context) {
         _state.value = current.copy(
             isPlaying = isPlaying ?: current.isPlaying,
             title = title ?: current.title,
+            artist = artist ?: current.artist,
+            imageUrl = imageUrl ?: current.imageUrl,
             positionMs = positionMs ?: current.positionMs,
             durationMs = durationMs ?: current.durationMs,
             episodeId = episodeId ?: current.episodeId,

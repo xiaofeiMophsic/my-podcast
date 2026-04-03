@@ -18,8 +18,8 @@ class PlayerViewModel @Inject constructor(
     val state: StateFlow<PlayerState> = controller.state
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlayerState())
 
-    fun playEpisode(episodeId: Long, title: String, url: String) {
-        controller.playEpisode(episodeId, title, url)
+    fun playEpisode(episodeId: Long, title: String, url: String, artist: String? = null, imageUrl: String? = null) {
+        controller.playEpisode(episodeId, title, url, artist, imageUrl)
     }
 
     fun togglePlayPause(isPlaying: Boolean) {

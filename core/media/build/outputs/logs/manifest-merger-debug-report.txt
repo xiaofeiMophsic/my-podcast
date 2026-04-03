@@ -1,21 +1,27 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:1:1-10:12
-INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:1:1-10:12
+ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:1:1-14:12
+INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:1:1-14:12
 	package
 		INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml
 	xmlns:android
 		ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:1:11-69
 application
-ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:3:5-8:19
+ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:3:5-12:19
 service#com.example.podcastapp.core.media.PlaybackService
-ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:4:9-7:61
+ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:4:9-11:19
 	android:exported
 		ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:6:13-37
 	android:foregroundServiceType
 		ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:7:13-58
 	android:name
 		ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:5:13-44
+intent-filter#action:name:androidx.media3.session.MediaSessionService
+ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:8:13-10:29
+action#androidx.media3.session.MediaSessionService
+ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:9:17-86
+	android:name
+		ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:9:25-83
 uses-sdk
 INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml

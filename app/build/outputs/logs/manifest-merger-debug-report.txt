@@ -9,7 +9,7 @@ MERGED from [:core:player] /Users/xiaofei27/AndroidStudioProjects/composeSample2
 MERGED from [:feature:podcast] /Users/xiaofei27/AndroidStudioProjects/composeSample2/feature/podcast/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
 MERGED from [:feature:download] /Users/xiaofei27/AndroidStudioProjects/composeSample2/feature/download/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
 MERGED from [:core:ui] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/ui/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
-MERGED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-14:12
+MERGED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-18:12
 MERGED from [:core:data] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/data/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
 MERGED from [:core:database] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/database/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
 MERGED from [:core:datastore] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/datastore/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
@@ -161,8 +161,8 @@ ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/app/src/main/An
 application
 ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/app/src/main/AndroidManifest.xml:8:5-33:19
 INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/app/src/main/AndroidManifest.xml:8:5-33:19
-MERGED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-12:19
-MERGED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-12:19
+MERGED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-16:19
+MERGED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-16:19
 MERGED from [com.google.android.material:material:1.13.0] /Users/xiaofei27/.gradle/caches/9.1.0/transforms/46097f4d5fe5557be9f4c1154aea4587/transformed/material-1.13.0/AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.13.0] /Users/xiaofei27/.gradle/caches/9.1.0/transforms/46097f4d5fe5557be9f4c1154aea4587/transformed/material-1.13.0/AndroidManifest.xml:22:5-20
 MERGED from [androidx.room:room-runtime-android:2.8.4] /Users/xiaofei27/.gradle/caches/9.1.0/transforms/6aa9f3c1928e09ac6077ae2eab036d64/transformed/room-runtime/AndroidManifest.xml:23:5-29:19
@@ -500,13 +500,19 @@ MERGED from [com.google.dagger:dagger-lint-aar:2.59.2] /Users/xiaofei27/.gradle/
 	android:minSdkVersion
 		INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/app/src/main/AndroidManifest.xml
 service#com.example.podcastapp.core.media.PlaybackService
-ADDED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:9-11:61
+ADDED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:9-15:19
 	android:exported
 		ADDED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:10:13-37
 	android:foregroundServiceType
 		ADDED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:11:13-58
 	android:name
 		ADDED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:9:13-77
+intent-filter#action:name:androidx.media3.session.MediaSessionService
+ADDED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:12:13-14:29
+action#androidx.media3.session.MediaSessionService
+ADDED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:13:17-86
+	android:name
+		ADDED from [:core:media] /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:13:25-83
 service#androidx.room.MultiInstanceInvalidationService
 ADDED from [androidx.room:room-runtime-android:2.8.4] /Users/xiaofei27/.gradle/caches/9.1.0/transforms/6aa9f3c1928e09ac6077ae2eab036d64/transformed/room-runtime/AndroidManifest.xml:24:9-28:63
 	android:exported

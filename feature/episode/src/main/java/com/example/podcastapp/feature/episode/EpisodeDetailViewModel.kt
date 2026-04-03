@@ -80,7 +80,7 @@ class EpisodeDetailViewModel @Inject constructor(
         val id = current.episodeId ?: return
         val url = current.localPath ?: current.audioUrl ?: return
         val title = current.title
-        playerController.playEpisode(id, title, url)
+        playerController.playEpisode(id, title, url, imageUrl = current.imageUrl)
     }
 
     fun togglePlay() {
