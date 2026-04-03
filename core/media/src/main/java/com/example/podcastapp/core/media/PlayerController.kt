@@ -86,7 +86,7 @@ class PlayerController(private val context: Context) {
 
     private fun ensureServiceStarted() {
         val intent = Intent(context, PlaybackService::class.java)
-        context.startService(intent)
+        ContextCompat.startForegroundService(context, intent)
     }
 
     private fun updateState(
