@@ -1,0 +1,26 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:1:1-10:12
+INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:1:1-10:12
+	package
+		INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:1:11-69
+application
+ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:3:5-8:19
+service#com.example.podcastapp.core.media.PlaybackService
+ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:4:9-7:61
+	android:exported
+		ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:6:13-37
+	android:foregroundServiceType
+		ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:7:13-58
+	android:name
+		ADDED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml:5:13-44
+uses-sdk
+INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml
+INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/xiaofei27/AndroidStudioProjects/composeSample2/core/media/src/main/AndroidManifest.xml
