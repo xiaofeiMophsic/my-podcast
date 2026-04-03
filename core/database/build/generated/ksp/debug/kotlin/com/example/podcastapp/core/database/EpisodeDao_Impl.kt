@@ -382,6 +382,32 @@ public class EpisodeDao_Impl(
     }
   }
 
+  public override suspend fun getEpisodeIdsByPodcast(podcastId: Long): List<EpisodeIdAndGuid> {
+    val _sql: String = "SELECT id, guid FROM episodes WHERE podcastId = ?"
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        _stmt.bindLong(_argIndex, podcastId)
+        val _columnIndexOfId: Int = 0
+        val _columnIndexOfGuid: Int = 1
+        val _result: MutableList<EpisodeIdAndGuid> = mutableListOf()
+        while (_stmt.step()) {
+          val _item: EpisodeIdAndGuid
+          val _tmpId: Long
+          _tmpId = _stmt.getLong(_columnIndexOfId)
+          val _tmpGuid: String
+          _tmpGuid = _stmt.getText(_columnIndexOfGuid)
+          _item = EpisodeIdAndGuid(_tmpId,_tmpGuid)
+          _result.add(_item)
+        }
+        _result
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
   public companion object {
     public fun getRequiredConverters(): List<KClass<*>> = emptyList()
   }

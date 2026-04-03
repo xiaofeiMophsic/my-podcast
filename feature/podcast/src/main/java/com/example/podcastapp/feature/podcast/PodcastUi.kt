@@ -5,7 +5,9 @@ data class PodcastUi(
     val title: String = "",
     val description: String? = null,
     val imageUrl: String? = null,
+    val feedUrl: String = "",
     val isSubscribed: Boolean = false,
+    val isRefreshing: Boolean = false,
 )
 
 data class PodcastListUiState(

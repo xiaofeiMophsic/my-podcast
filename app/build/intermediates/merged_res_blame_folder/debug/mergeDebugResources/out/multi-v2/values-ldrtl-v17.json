@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.podcastapp-mergeDebugResources-65:/values-ldrtl-v17/values-ldrtl-v17.xml",
+            "outputFile": "com.example.podcastapp-mergeDebugResources-66:/values-ldrtl-v17/values-ldrtl-v17.xml",
             "map": [
                 {
-                    "source": "/Users/xiaofei27/.gradle/caches/9.1.0/transforms/1a1da8726fe329e11fadeca57de45b58/transformed/material-1.13.0/res/values-ldrtl-v17/values-ldrtl-v17.xml",
+                    "source": "/Users/xiaofei27/.gradle/caches/9.1.0/transforms/46097f4d5fe5557be9f4c1154aea4587/transformed/material-1.13.0/res/values-ldrtl-v17/values-ldrtl-v17.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",

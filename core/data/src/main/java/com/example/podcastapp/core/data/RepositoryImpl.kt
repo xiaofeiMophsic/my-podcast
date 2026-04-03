@@ -73,8 +73,11 @@ class EpisodeRepositoryImpl(
         val feed = rssFetcher.fetch(podcast.feedUrl)
         val now = System.currentTimeMillis()
 
+        val existingIds = episodeDao.getEpisodeIdsByPodcast(podcastId).associate { it.guid to it.id }
+
         val items = feed.items.map { item ->
             EpisodeEntity(
+                id = existingIds[item.guid] ?: 0,
                 podcastId = podcastId,
                 guid = item.guid,
                 title = item.title,

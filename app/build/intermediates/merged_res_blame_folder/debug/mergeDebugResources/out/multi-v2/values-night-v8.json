@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.podcastapp-mergeDebugResources-65:/values-night-v8/values-night-v8.xml",
+            "outputFile": "com.example.podcastapp-mergeDebugResources-66:/values-night-v8/values-night-v8.xml",
             "map": [
                 {
-                    "source": "/Users/xiaofei27/.gradle/caches/9.1.0/transforms/1a1da8726fe329e11fadeca57de45b58/transformed/material-1.13.0/res/values-night-v8/values-night-v8.xml",
+                    "source": "/Users/xiaofei27/.gradle/caches/9.1.0/transforms/46097f4d5fe5557be9f4c1154aea4587/transformed/material-1.13.0/res/values-night-v8/values-night-v8.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -21,7 +21,7 @@
                     }
                 },
                 {
-                    "source": "/Users/xiaofei27/.gradle/caches/9.1.0/transforms/35eac696a4305ff976fefde4809ccf45/transformed/appcompat-1.7.0/res/values-night-v8/values-night-v8.xml",
+                    "source": "/Users/xiaofei27/.gradle/caches/9.1.0/transforms/8ef4c038383ba66fc9be7785c1046848/transformed/appcompat-1.7.0/res/values-night-v8/values-night-v8.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",

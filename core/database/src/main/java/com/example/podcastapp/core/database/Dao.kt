@@ -36,6 +36,9 @@ interface EpisodeDao {
     @Query("SELECT * FROM episodes WHERE title LIKE '%' || :query || '%' ORDER BY pubDate DESC")
     fun searchPaging(query: String): PagingSource<Int, EpisodeEntity>
 
+    @Query("SELECT id, guid FROM episodes WHERE podcastId = :podcastId")
+    suspend fun getEpisodeIdsByPodcast(podcastId: Long): List<EpisodeIdAndGuid>
+
     @Upsert
     suspend fun upsertAll(items: List<EpisodeEntity>)
 

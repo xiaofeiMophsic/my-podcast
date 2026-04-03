@@ -75,3 +75,8 @@ enum class DownloadStatus {
     FAILED,
     CANCELED,
 }
+
+data class EpisodeIdAndGuid(
+    val id: Long,
+    val guid: String,
+)

@@ -34,6 +34,8 @@ class EpisodeDetailViewModel @Inject constructor(
 
     private val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
+    val playerState = playerController.state
+
     init {
         viewModelScope.launch {
             val episode = episodeRepository.getEpisode(episodeId)
@@ -42,6 +44,7 @@ class EpisodeDetailViewModel @Inject constructor(
                 description = episode?.description,
                 pubDate = episode?.pubDate?.let { dateFormatter.format(Date(it)) },
                 audioUrl = episode?.audioUrl,
+                imageUrl = episode?.imageUrl,
                 episodeId = episode?.id,
                 downloadStatus = DownloadStatus.QUEUED,
                 localPath = null,
@@ -79,6 +82,34 @@ class EpisodeDetailViewModel @Inject constructor(
         val title = current.title
         playerController.playEpisode(id, title, url)
     }
+
+    fun togglePlay() {
+        if (playerState.value.isPlaying) {
+            playerController.pause()
+        } else {
+            val current = _state.value
+            val id = current.episodeId ?: return
+            if (playerState.value.episodeId == id) {
+                playerController.play()
+            } else {
+                play()
+            }
+        }
+    }
+
+    fun seekTo(positionMs: Long) {
+        playerController.seekTo(positionMs)
+    }
+
+    fun skipForward() {
+        val current = playerController.state.value.positionMs
+        playerController.seekTo(current + 30000)
+    }
+
+    fun skipBackward() {
+        val current = playerController.state.value.positionMs
+        playerController.seekTo((current - 10000).coerceAtLeast(0))
+    }
 }
 
 data class EpisodeDetailUiState(
@@ -86,6 +117,7 @@ data class EpisodeDetailUiState(
     val description: String? = null,
     val pubDate: String? = null,
     val audioUrl: String? = null,
+    val imageUrl: String? = null,
     val episodeId: Long? = null,
     val downloadStatus: DownloadStatus = DownloadStatus.QUEUED,
     val localPath: String? = null,

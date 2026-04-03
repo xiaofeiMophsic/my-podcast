@@ -23,18 +23,26 @@ class PodcastListViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     private val _isLoading = MutableStateFlow(false)
 
+    private val _refreshingUrls = MutableStateFlow<Set<String>>(emptySet())
+
     val uiState: StateFlow<PodcastListUiState> =
         combine(
             podcastRepository.observePodcasts(),
             podcastRepository.observeSubscriptions(),
             _error,
             _isLoading,
-        ) { podcasts, subscriptions, error, isLoading ->
+            _refreshingUrls,
+        ) { podcasts, subscriptions, error, isLoading, refreshingUrls ->
             val subscribedIds = subscriptions.map { it.podcastId }.toSet()
             PodcastListUiState(
                 isLoading = isLoading,
                 errorMessage = error,
-                items = podcasts.map { it.toUi(subscribedIds.contains(it.id)) },
+                items = podcasts.map {
+                    it.toUi(
+                        isSubscribed = subscribedIds.contains(it.id),
+                        isRefreshing = refreshingUrls.contains(it.feedUrl)
+                    )
+                },
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PodcastListUiState())
 
@@ -47,6 +55,7 @@ class PodcastListViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            _refreshingUrls.value = _refreshingUrls.value + trimmed
             try {
                 val podcast = podcastRepository.refreshPodcast(trimmed)
                 podcastRepository.subscribe(podcast.id)
@@ -55,17 +64,35 @@ class PodcastListViewModel @Inject constructor(
                 _error.value = t.message ?: "Failed to add feed"
             } finally {
                 _isLoading.value = false
+                _refreshingUrls.value = _refreshingUrls.value - trimmed
+            }
+        }
+    }
+
+    fun refreshPodcast(feedUrl: String) {
+        viewModelScope.launch {
+            _error.value = null
+            _refreshingUrls.value = _refreshingUrls.value + feedUrl
+            try {
+                val podcast = podcastRepository.refreshPodcast(feedUrl)
+                episodeRepository.refreshEpisodes(podcast.id)
+            } catch (t: Throwable) {
+                _error.value = t.message ?: "Failed to refresh podcast"
+            } finally {
+                _refreshingUrls.value = _refreshingUrls.value - feedUrl
             }
         }
     }
 }
 
-private fun PodcastEntity.toUi(isSubscribed: Boolean): PodcastUi {
+private fun PodcastEntity.toUi(isSubscribed: Boolean, isRefreshing: Boolean): PodcastUi {
     return PodcastUi(
         id = id,
         title = title,
         description = description,
         imageUrl = imageUrl,
+        feedUrl = feedUrl,
         isSubscribed = isSubscribed,
+        isRefreshing = isRefreshing,
     )
 }

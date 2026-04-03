@@ -12,7 +12,7 @@ import java.util.Locale
 class RssParser {
     fun parse(input: InputStream): RssFeed {
         val factory = XmlPullParserFactory.newInstance()
-        factory.isNamespaceAware = true
+        factory.isNamespaceAware = false
         val parser = factory.newPullParser()
         parser.setInput(input, null)
 
@@ -74,12 +74,24 @@ class RssParser {
                                 if (inItem) itemImageUrl = href else channelImageUrl = href
                             }
                         }
-                        "image" -> if (!inItem) {
-                            // handled when <image><url> ...
+                        "media:content", "media:thumbnail" -> {
+                            val url = parser.getAttributeValue(null, "url")
+                            if (!url.isNullOrBlank()) {
+                                if (inItem) itemImageUrl = url else if (channelImageUrl == null) channelImageUrl = url
+                            }
                         }
-                        "url" -> if (!inItem && parser.depth >= 3 && channelImageUrl == null) {
+                        "image" -> {
+                            // Can be used for both channel and item
+                        }
+                        "url" -> if (parser.depth >= 3) {
                             val text = parser.nextTextOrNull()
-                            if (!text.isNullOrBlank()) channelImageUrl = text
+                            if (!text.isNullOrBlank()) {
+                                if (inItem) {
+                                    if (itemImageUrl == null) itemImageUrl = text
+                                } else {
+                                    if (channelImageUrl == null) channelImageUrl = text
+                                }
+                            }
                         }
                         "itunes:author" -> if (!inItem) channelAuthor = parser.nextTextOrNull()
                         "itunes:duration" -> if (inItem) itemDuration = parseDuration(parser.nextTextOrNull())

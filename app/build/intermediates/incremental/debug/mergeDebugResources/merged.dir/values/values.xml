@@ -2506,6 +2506,7 @@
     <item name="androidx_compose_ui_view_composition_context" type="id"/>
     <item name="androidx_window_activity_scope" type="id"/>
     <item name="auto_clear_focus_behavior_tag" type="id"/>
+    <item name="coil_request_manager" type="id"/>
     <item name="compose_prefetch_scheduler" type="id"/>
     <item name="compose_view_saveable_id_tag" type="id"/>
     <item name="consume_window_insets_tag" type="id"/>
