@@ -14,10 +14,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.podcastapp.core.player.NowPlayingRoute
 import com.example.podcastapp.feature.download.DownloadRoute
 import com.example.podcastapp.feature.episode.EpisodeDetailRoute
 import com.example.podcastapp.feature.episode.EpisodeListRoute
 import com.example.podcastapp.feature.episode.SearchRoute
+import com.example.podcastapp.feature.podcast.HomeScreen
 import com.example.podcastapp.feature.podcast.PodcastListRoute
 import com.example.podcastapp.navigation.NavRoutes
 import com.example.podcastapp.ui.theme.AppTheme
@@ -48,7 +50,16 @@ class MainActivity : ComponentActivity() {
 private fun AppRoot() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = NavRoutes.PODCAST_LIST) {
+    NavHost(navController = navController, startDestination = NavRoutes.HOME) {
+        composable(NavRoutes.HOME) {
+            HomeScreen(
+                onSearchClick = { navController.navigate(NavRoutes.SEARCH) },
+                onPlayerClick = { navController.navigate(NavRoutes.NOW_PLAYING) },
+            )
+        }
+        composable(NavRoutes.NOW_PLAYING) {
+            NowPlayingRoute(onBack = { navController.popBackStack() })
+        }
         composable(NavRoutes.PODCAST_LIST) {
             PodcastListRoute(
                 onPodcastClick = { podcastId ->

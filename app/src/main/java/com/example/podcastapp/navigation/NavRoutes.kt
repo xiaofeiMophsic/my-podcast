@@ -1,6 +1,8 @@
 package com.example.podcastapp.navigation
 
 object NavRoutes {
+    const val HOME = "home"
+    const val NOW_PLAYING = "now_playing"
     const val PODCAST_LIST = "podcast_list"
     const val EPISODE_LIST = "episode_list"
     const val EPISODE_DETAIL = "episode_detail"
