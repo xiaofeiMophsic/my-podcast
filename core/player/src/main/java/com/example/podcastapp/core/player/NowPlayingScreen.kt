@@ -23,11 +23,15 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +42,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -98,15 +103,27 @@ fun NowPlayingRoute(
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val progress by remember {
+        derivedStateOf {
+            if (state.durationMs > 0) {
+                (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
+            } else 0.518f
+        }
+    }
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 120, easing = LinearEasing),
+        label = "waveformProgress",
+    )
+
     NowPlayingScreen(
         title     = state.title.ifBlank { "Take My Breath" },
         artist    = state.artist ?: "The Weeknd",
         imageUrl  = state.imageUrl ?: ALBUM_COVER,
         isPlaying = state.isPlaying,
         durationMs = state.durationMs,
-        progress  = if (state.durationMs > 0) {
-            (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
-        } else 0.518f,
+        progress  = animatedProgress,
         waveformBars = state.waveformBars,
         onBack          = onBack,
         onTogglePlay    = { viewModel.togglePlayPause(state.isPlaying) },
@@ -335,16 +352,38 @@ private fun AudioWaveform(
     onScrubEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val density = LocalDensity.current
+    val barWidthPx = with(density) { 4.dp.toPx() }
+    val spacingPx = with(density) { 3.dp.toPx() }
+
     Canvas(
-        modifier = modifier.pointerInput(Unit) {
+        modifier = modifier.pointerInput(bars, progress) {
             detectDragGestures(
                 onDragStart = { offset ->
-                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                    val totalBars = bars.size
+                    if (totalBars == 0) return@detectDragGestures
+                    val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
+                    val playheadX = progress.coerceIn(0f, 1f) * totalWidth
+                    val centerX = size.width / 2f
+                    val minOffset = size.width - totalWidth
+                    val desiredOffset = centerX - playheadX
+                    val offsetX = if (minOffset > 0f) 0f else desiredOffset.coerceIn(minOffset, 0f)
+                    val positionX = (offset.x - offsetX).coerceIn(0f, totalWidth)
+                    val fraction = (positionX / totalWidth).coerceIn(0f, 1f)
                     onSeekTo(fraction)
                     onScrub(fraction)
                 },
                 onDrag = { change, _ ->
-                    val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                    val totalBars = bars.size
+                    if (totalBars == 0) return@detectDragGestures
+                    val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
+                    val playheadX = progress.coerceIn(0f, 1f) * totalWidth
+                    val centerX = size.width / 2f
+                    val minOffset = size.width - totalWidth
+                    val desiredOffset = centerX - playheadX
+                    val offsetX = if (minOffset > 0f) 0f else desiredOffset.coerceIn(minOffset, 0f)
+                    val positionX = (change.position.x - offsetX).coerceIn(0f, totalWidth)
+                    val fraction = (positionX / totalWidth).coerceIn(0f, 1f)
                     onSeekTo(fraction)
                     onScrub(fraction)
                 },
@@ -353,23 +392,68 @@ private fun AudioWaveform(
             )
         }
     ) {
-        val totalBars  = bars.size
-        val barWidthPx = 4.35f * density
-        val spacingPx  = (size.width - totalBars * barWidthPx) / (totalBars - 1)
+        val totalBars = bars.size
+        if (totalBars == 0) return@Canvas
         val maxHeightPx = size.height
+        val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
         val clampedProgress = progress.coerceIn(0f, 1f)
-        val playedBars = (clampedProgress * totalBars).toInt()
+        val playheadX = clampedProgress * totalWidth
+
+        val centerX = size.width / 2f
+        val minOffset = size.width - totalWidth
+        val desiredOffset = centerX - playheadX
+        val offsetX = if (minOffset > 0f) 0f else desiredOffset.coerceIn(minOffset, 0f)
 
         bars.forEachIndexed { index, bar ->
-            val x    = index * (barWidthPx + spacingPx)
-            val barH = bar.height * maxHeightPx
-            val y    = (maxHeightPx - barH) / 2f
-            drawRoundRect(
-                color        = if (index < playedBars) AccentGreen else WaveGray,
-                topLeft      = Offset(x, y),
-                size         = Size(barWidthPx, barH),
-                cornerRadius = CornerRadius(barWidthPx / 2f),
-            )
+            val absoluteX = index * (barWidthPx + spacingPx)
+            val x = absoluteX + offsetX
+            val barH = (bar.height * maxHeightPx * 1.2f).coerceAtMost(maxHeightPx)
+            val y = (maxHeightPx - barH) / 2f
+            // 计算当前这条 Bar 的左右边界（相对于音频总长度的绝对坐标）
+            val barLeft = absoluteX
+            val barRight = absoluteX + barWidthPx
+
+            when {
+                // 情况 1: 播放头已经完全覆盖该 Bar -> 全绿
+                barRight <= playheadX -> {
+                    drawRoundRect(
+                        color = AccentGreen,
+                        topLeft = Offset(x, y),
+                        size = Size(barWidthPx, barH),
+                        cornerRadius = CornerRadius(barWidthPx / 2f)
+                    )
+                }
+                // 情况 2: 播放头还没到该 Bar -> 全灰
+                barLeft >= playheadX -> {
+                    drawRoundRect(
+                        color = WaveGray,
+                        topLeft = Offset(x, y),
+                        size = Size(barWidthPx, barH),
+                        cornerRadius = CornerRadius(barWidthPx / 2f)
+                    )
+                }
+                // 情况 3: 播放头正处于该 Bar 中间 -> 丝滑渐变点亮
+                else -> {
+                    // 计算播放头在该 Bar 内部的相对比例 (0.0 ~ 1.0)
+                    val internalProgress = (playheadX - barLeft) / barWidthPx
+
+                    // 使用 Brush.linearGradient 实现左绿右灰的硬切分
+                    // 通过 stop 相同来实现没有模糊的平滑切割点
+                    drawRoundRect(
+                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            0f to AccentGreen,
+                            internalProgress to AccentGreen,
+                            internalProgress to WaveGray,
+                            1f to WaveGray,
+                            startX = x,
+                            endX = x + barWidthPx
+                        ),
+                        topLeft = Offset(x, y),
+                        size = Size(barWidthPx, barH),
+                        cornerRadius = CornerRadius(barWidthPx / 2f)
+                    )
+                }
+            }
         }
     }
 }

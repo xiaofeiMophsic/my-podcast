@@ -1,45 +1,54 @@
 package com.example.podcastapp.core.media
 
+import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.MoreExecutors
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import androidx.core.net.toUri
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class PlayerController(private val context: Context) {
+@Singleton
+class PlayerController @Inject constructor(
+    private val context: Context,
+    private val waveformGenerator: WaveformGenerator = WaveformGenerator(context)
+) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    private val waveformGenerator = WaveformGenerator(context)
-    private var staticWaveform: List<Float>? = null
-    private var waveformJob: Job? = null
-
-    internal val player: ExoPlayer = ExoPlayer.Builder(context).build()
+    // 核心：UI 操作的是这个“远程遥控器”
+    private var browser: MediaController? = null
 
     private val _state = MutableStateFlow(PlayerState())
     val state: StateFlow<PlayerState> = _state
 
     init {
-        player.addListener(
-            object : Player.Listener {
+        setupMediaController()
+    }
+
+    private fun setupMediaController() {
+        val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+        val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+
+        controllerFuture.addListener({
+            val controller = controllerFuture.get()
+            this.browser = controller
+
+            // 监听播放器状态变化并更新给 UI
+            controller.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     updateState(isPlaying = isPlaying)
+                    handlePositionPolling(isPlaying) // 动态开关
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    updateState(durationMs = player.duration.coerceAtLeast(0L))
+                    updateState(durationMs = controller.duration.coerceAtLeast(0L))
                 }
 
                 override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
@@ -49,15 +58,43 @@ class PlayerController(private val context: Context) {
                         imageUrl = mediaMetadata.artworkUri?.toString()
                     )
                 }
-            }
-        )
+            })
 
+            // 开启进度轮询
+            startPositionPolling()
+        }, MoreExecutors.directExecutor())
+    }
+
+
+    private var positionJob: Job? = null
+
+    private fun handlePositionPolling(isPlaying: Boolean) {
+        positionJob?.cancel() // 每次状态切换先清理旧任务
+        if (isPlaying) {
+            positionJob = scope.launch {
+                while (isActive) {
+                    val pos = browser?.currentPosition ?: 0L
+                    // 只有当位置真的变了才更新 State，避免 Compose 重组浪费
+                    if (_state.value.positionMs != pos) {
+                        updateState(positionMs = pos)
+                    }
+
+                    // 16ms 对应 60fps，这是最适合你波形图平滑移动的频率
+                    delay(16)
+                }
+            }
+        }
+    }
+
+    private fun startPositionPolling() {
         scope.launch {
             while (isActive) {
-                updateState(
-                    positionMs = player.currentPosition.coerceAtLeast(0L),
-                )
-                delay(500)
+                browser?.let {
+                    if (it.isPlaying) {
+                        updateState(positionMs = it.currentPosition.coerceAtLeast(0L))
+                    }
+                }
+                delay(100) // 100ms 轮询一次进度
             }
         }
     }
@@ -69,8 +106,8 @@ class PlayerController(private val context: Context) {
         artist: String? = null,
         imageUrl: String? = null
     ) {
-        ensureServiceStarted()
-        waveformJob?.cancel()
+        val controller = browser ?: return
+
         val mediaMetadata = MediaMetadata.Builder()
             .setTitle(title)
             .setArtist(artist)
@@ -82,41 +119,24 @@ class PlayerController(private val context: Context) {
             .setMediaId(episodeId.toString())
             .setMediaMetadata(mediaMetadata)
             .build()
-        player.setMediaItem(mediaItem)
-        player.prepare()
-        player.play()
-        updateState(title = title, artist = artist, imageUrl = imageUrl, episodeId = episodeId)
 
-        if (staticWaveform.isNullOrEmpty()) {
-            waveformJob = scope.launch(Dispatchers.IO) {
-                val bars = waveformGenerator.generate(url.toUri())
-                if (bars.isNotEmpty()) {
-                    withContext(Dispatchers.Main) { setStaticWaveform(bars) }
-                }
+        // 发送指令给后台 Service
+        controller.setMediaItem(mediaItem)
+        controller.prepare()
+        controller.play()
+
+        // 波形生成逻辑（异步）
+        scope.launch(Dispatchers.IO) {
+            val bars = waveformGenerator.generate(url.toUri())
+            withContext(Dispatchers.Main) {
+                updateState(waveformBars = bars, title = title, artist = artist, imageUrl = imageUrl, episodeId = episodeId)
             }
         }
     }
 
-    fun play() {
-        ensureServiceStarted()
-        player.play()
-    }
-
-    fun pause() = player.pause()
-
-    fun seekTo(positionMs: Long) {
-        player.seekTo(positionMs)
-    }
-
-    fun setStaticWaveform(bars: List<Float>?) {
-        staticWaveform = bars
-        updateState(waveformBars = bars ?: emptyList())
-    }
-
-    private fun ensureServiceStarted() {
-        val intent = Intent(context, PlaybackService::class.java)
-        ContextCompat.startForegroundService(context, intent)
-    }
+    fun play() = browser?.play()
+    fun pause() = browser?.pause()
+    fun seekTo(positionMs: Long) = browser?.seekTo(positionMs)
 
     private fun updateState(
         isPlaying: Boolean? = null,

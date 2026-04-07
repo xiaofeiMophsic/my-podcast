@@ -85,8 +85,8 @@ class EpisodeDetailViewModel @Inject constructor(
         val url = current.localPath ?: current.audioUrl ?: return
         val title = current.title
         viewModelScope.launch {
-            val waveform = waveformRepository.getWaveform(id)
-            playerController.setStaticWaveform(waveform)
+//            val waveform = waveformRepository.getWaveform(id)
+//            playerController.setStaticWaveform(waveform)
             playerController.playEpisode(id, title, url, imageUrl = current.imageUrl)
         }
     }

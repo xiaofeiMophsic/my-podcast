@@ -50,8 +50,7 @@ class HomeViewModel @Inject constructor(
 
     fun playEpisode(episode: EpisodeEntity) {
         viewModelScope.launch {
-            val waveform = waveformRepository.getWaveform(episode.id)
-            playerController.setStaticWaveform(waveform)
+//            val waveform = waveformRepository.getWaveform(episode.id)
             playerController.playEpisode(
                 episodeId = episode.id,
                 title = episode.title,
