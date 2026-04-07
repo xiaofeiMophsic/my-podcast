@@ -8,11 +8,15 @@ import com.example.podcastapp.core.data.EpisodeRepository
 import com.example.podcastapp.core.data.EpisodeRepositoryImpl
 import com.example.podcastapp.core.data.PodcastRepository
 import com.example.podcastapp.core.data.PodcastRepositoryImpl
+import com.example.podcastapp.core.data.WaveformRepository
+import com.example.podcastapp.core.data.WaveformRepositoryImpl
 import com.example.podcastapp.core.database.AppDatabase
 import com.example.podcastapp.core.database.DownloadDao
 import com.example.podcastapp.core.database.EpisodeDao
 import com.example.podcastapp.core.database.PodcastDao
 import com.example.podcastapp.core.database.SubscriptionDao
+import com.example.podcastapp.core.database.WaveformDao
+import com.example.podcastapp.core.media.WaveformGenerator
 import com.example.podcastapp.core.network.RssFetcher
 import com.example.podcastapp.core.network.RssParser
 import dagger.Module
@@ -54,6 +58,7 @@ object AppModule {
     @Provides fun provideEpisodeDao(db: AppDatabase): EpisodeDao = db.episodeDao()
     @Provides fun provideSubscriptionDao(db: AppDatabase): SubscriptionDao = db.subscriptionDao()
     @Provides fun provideDownloadDao(db: AppDatabase): DownloadDao = db.downloadDao()
+    @Provides fun provideWaveformDao(db: AppDatabase): WaveformDao = db.waveformDao()
 
     @Provides
     @Singleton
@@ -76,4 +81,16 @@ object AppModule {
     fun provideDownloadRepository(
         downloadDao: DownloadDao,
     ): DownloadRepository = DownloadRepositoryImpl(downloadDao)
+
+    @Provides
+    @Singleton
+    fun provideWaveformRepository(
+        waveformDao: WaveformDao,
+    ): WaveformRepository = WaveformRepositoryImpl(waveformDao)
+
+    @Provides
+    @Singleton
+    fun provideWaveformGenerator(
+        @ApplicationContext context: Context,
+    ): WaveformGenerator = WaveformGenerator(context)
 }

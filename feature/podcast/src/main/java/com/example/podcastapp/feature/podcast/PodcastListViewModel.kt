@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,6 +26,8 @@ class PodcastListViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
 
     private val _refreshingUrls = MutableStateFlow<Set<String>>(emptySet())
+    private val _addFeedEvents = MutableSharedFlow<AddFeedEvent>()
+    val addFeedEvents = _addFeedEvents.asSharedFlow()
 
     val uiState: StateFlow<PodcastListUiState> =
         combine(
@@ -50,6 +54,9 @@ class PodcastListViewModel @Inject constructor(
         val trimmed = feedUrl.trim()
         if (trimmed.isBlank()) {
             _error.value = "Feed URL is required"
+            viewModelScope.launch {
+                _addFeedEvents.emit(AddFeedEvent.Failure(_error.value ?: "Feed URL is required"))
+            }
             return
         }
         viewModelScope.launch {
@@ -60,8 +67,10 @@ class PodcastListViewModel @Inject constructor(
                 val podcast = podcastRepository.refreshPodcast(trimmed)
                 podcastRepository.subscribe(podcast.id)
                 episodeRepository.refreshEpisodes(podcast.id)
+                _addFeedEvents.emit(AddFeedEvent.Success("Subscription added"))
             } catch (t: Throwable) {
                 _error.value = t.message ?: "Failed to add feed"
+                _addFeedEvents.emit(AddFeedEvent.Failure(_error.value ?: "Failed to add feed"))
             } finally {
                 _isLoading.value = false
                 _refreshingUrls.value = _refreshingUrls.value - trimmed
@@ -83,6 +92,11 @@ class PodcastListViewModel @Inject constructor(
             }
         }
     }
+}
+
+sealed interface AddFeedEvent {
+    data class Success(val message: String) : AddFeedEvent
+    data class Failure(val message: String) : AddFeedEvent
 }
 
 private fun PodcastEntity.toUi(isSubscribed: Boolean, isRefreshing: Boolean): PodcastUi {

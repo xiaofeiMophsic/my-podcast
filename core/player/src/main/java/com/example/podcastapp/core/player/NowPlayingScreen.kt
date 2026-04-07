@@ -2,6 +2,7 @@ package com.example.podcastapp.core.player
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,10 +40,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
+import kotlin.math.roundToInt
 
 // --- Design tokens ---
 private val ScreenBg        = Color(0xFFFFFFED)  // #FFFFED
@@ -50,30 +57,28 @@ private val ShadowColor     = Color(0x40000000)
 private val AlbumCardBg     = Color(0xFFFFFFFF)
 
 // --- Waveform data (normalised 0..1, derived from Figma pixel heights, max=66.3px) ---
-// true = played (green), false = unplayed (gray)
-private data class WaveBar(val height: Float, val played: Boolean)
+private data class WaveBar(val height: Float)
 
 private val WAVEFORM: List<WaveBar> = listOf(
-    WaveBar(0.508f, true), WaveBar(0.869f, true), WaveBar(0.738f, true),
-    WaveBar(0.377f, true), WaveBar(0.508f, true), WaveBar(0.410f, true),
-    WaveBar(1.000f, true), WaveBar(0.508f, true), WaveBar(0.508f, true),
-    WaveBar(0.508f, true), WaveBar(0.344f, true), WaveBar(0.443f, true),
-    WaveBar(0.180f, true), WaveBar(0.443f, true), WaveBar(0.934f, true),
-    WaveBar(0.639f, true), WaveBar(0.443f, true), WaveBar(0.279f, true),
-    WaveBar(0.639f, true), WaveBar(0.934f, true), WaveBar(0.639f, true),
-    WaveBar(0.639f, true), WaveBar(0.738f, true), WaveBar(0.934f, true),
-    WaveBar(0.574f, true), WaveBar(0.443f, true), WaveBar(0.639f, true),
-    WaveBar(0.639f, true), WaveBar(0.508f, true),
-    // -- unplayed --
-    WaveBar(0.869f, false), WaveBar(0.738f, false), WaveBar(0.574f, false),
-    WaveBar(0.508f, false), WaveBar(0.639f, false), WaveBar(1.000f, false),
-    WaveBar(0.508f, false), WaveBar(0.508f, false), WaveBar(0.508f, false),
-    WaveBar(0.246f, false), WaveBar(0.312f, false), WaveBar(0.115f, false),
-    WaveBar(0.312f, false), WaveBar(0.639f, false), WaveBar(0.443f, false),
-    WaveBar(0.312f, false), WaveBar(0.180f, false), WaveBar(0.443f, false),
-    WaveBar(0.639f, false), WaveBar(0.443f, false), WaveBar(0.443f, false),
-    WaveBar(0.508f, false), WaveBar(0.639f, false), WaveBar(0.410f, false),
-    WaveBar(0.312f, false), WaveBar(0.443f, false), WaveBar(0.443f, false),
+    WaveBar(0.508f), WaveBar(0.869f), WaveBar(0.738f),
+    WaveBar(0.377f), WaveBar(0.508f), WaveBar(0.410f),
+    WaveBar(1.000f), WaveBar(0.508f), WaveBar(0.508f),
+    WaveBar(0.508f), WaveBar(0.344f), WaveBar(0.443f),
+    WaveBar(0.180f), WaveBar(0.443f), WaveBar(0.934f),
+    WaveBar(0.639f), WaveBar(0.443f), WaveBar(0.279f),
+    WaveBar(0.639f), WaveBar(0.934f), WaveBar(0.639f),
+    WaveBar(0.639f), WaveBar(0.738f), WaveBar(0.934f),
+    WaveBar(0.574f), WaveBar(0.443f), WaveBar(0.639f),
+    WaveBar(0.639f), WaveBar(0.508f),
+    WaveBar(0.869f), WaveBar(0.738f), WaveBar(0.574f),
+    WaveBar(0.508f), WaveBar(0.639f), WaveBar(1.000f),
+    WaveBar(0.508f), WaveBar(0.508f), WaveBar(0.508f),
+    WaveBar(0.246f), WaveBar(0.312f), WaveBar(0.115f),
+    WaveBar(0.312f), WaveBar(0.639f), WaveBar(0.443f),
+    WaveBar(0.312f), WaveBar(0.180f), WaveBar(0.443f),
+    WaveBar(0.639f), WaveBar(0.443f), WaveBar(0.443f),
+    WaveBar(0.508f), WaveBar(0.639f), WaveBar(0.410f),
+    WaveBar(0.312f), WaveBar(0.443f), WaveBar(0.443f),
 )
 
 // Asset URLs (Figma MCP, valid 7 days)
@@ -98,13 +103,19 @@ fun NowPlayingRoute(
         artist    = state.artist ?: "The Weeknd",
         imageUrl  = state.imageUrl ?: ALBUM_COVER,
         isPlaying = state.isPlaying,
+        durationMs = state.durationMs,
         progress  = if (state.durationMs > 0) {
             (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
         } else 0.518f,
+        waveformBars = state.waveformBars,
         onBack          = onBack,
         onTogglePlay    = { viewModel.togglePlayPause(state.isPlaying) },
         onSeekPrev      = { viewModel.seekTo(maxOf(0, state.positionMs - 15_000)) },
         onSeekNext      = { viewModel.seekTo(minOf(state.durationMs, state.positionMs + 15_000)) },
+        onSeekTo        = { fraction ->
+            val target = (state.durationMs * fraction).toLong().coerceAtLeast(0L)
+            viewModel.seekTo(target)
+        },
     )
 }
 
@@ -114,12 +125,19 @@ fun NowPlayingScreen(
     artist: String,
     imageUrl: String,
     isPlaying: Boolean,
+    durationMs: Long,
     progress: Float,
+    waveformBars: List<Float>,
     onBack: () -> Unit,
     onTogglePlay: () -> Unit,
     onSeekPrev: () -> Unit,
     onSeekNext: () -> Unit,
+    onSeekTo: (Float) -> Unit,
 ) {
+    var scrubFraction by remember { mutableStateOf<Float?>(null) }
+    val showFraction = scrubFraction ?: progress
+    val showTime = formatTimeFromFraction(showFraction, durationMs)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -204,11 +222,28 @@ fun NowPlayingScreen(
 
             // Waveform
             AudioWaveform(
-                bars = WAVEFORM,
+                bars = if (waveformBars.isNotEmpty()) waveformBars.map { WaveBar(it) } else WAVEFORM,
+                progress = progress,
+                onSeekTo = onSeekTo,
+                onScrub = { scrubFraction = it },
+                onScrubEnd = { scrubFraction = null },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(70.dp),
             )
+
+            if (scrubFraction != null) {
+                Text(
+                    text = "${showTime} / ${formatDuration(durationMs)}",
+                    fontSize = 12.sp,
+                    color = TextPrimary,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .align(Alignment.CenterHorizontally),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -292,25 +327,66 @@ private fun AlbumArtSection(imageUrl: String) {
 }
 
 @Composable
-private fun AudioWaveform(bars: List<WaveBar>, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
+private fun AudioWaveform(
+    bars: List<WaveBar>,
+    progress: Float,
+    onSeekTo: (Float) -> Unit,
+    onScrub: (Float) -> Unit,
+    onScrubEnd: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(
+        modifier = modifier.pointerInput(Unit) {
+            detectDragGestures(
+                onDragStart = { offset ->
+                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                    onSeekTo(fraction)
+                    onScrub(fraction)
+                },
+                onDrag = { change, _ ->
+                    val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                    onSeekTo(fraction)
+                    onScrub(fraction)
+                },
+                onDragEnd = { onScrubEnd() },
+                onDragCancel = { onScrubEnd() },
+            )
+        }
+    ) {
         val totalBars  = bars.size
         val barWidthPx = 4.35f * density
         val spacingPx  = (size.width - totalBars * barWidthPx) / (totalBars - 1)
         val maxHeightPx = size.height
+        val clampedProgress = progress.coerceIn(0f, 1f)
+        val playedBars = (clampedProgress * totalBars).toInt()
 
         bars.forEachIndexed { index, bar ->
             val x    = index * (barWidthPx + spacingPx)
             val barH = bar.height * maxHeightPx
             val y    = (maxHeightPx - barH) / 2f
             drawRoundRect(
-                color        = if (bar.played) Color(0xFF87B800) else Color(0xFFC4C4C4),
+                color        = if (index < playedBars) AccentGreen else WaveGray,
                 topLeft      = Offset(x, y),
                 size         = Size(barWidthPx, barH),
                 cornerRadius = CornerRadius(barWidthPx / 2f),
             )
         }
     }
+}
+
+private fun formatTimeFromFraction(fraction: Float, durationMs: Long): String {
+    val clamped = fraction.coerceIn(0f, 1f)
+    val totalSeconds = ((durationMs / 1000f) * clamped).roundToInt()
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format("%d:%02d", minutes, seconds)
+}
+
+private fun formatDuration(durationMs: Long): String {
+    val totalSeconds = (durationMs / 1000f).roundToInt()
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format("%d:%02d", minutes, seconds)
 }
 
 @Composable

@@ -4,6 +4,8 @@ import android.app.DownloadManager
 import android.content.Context
 import com.example.podcastapp.core.data.DownloadController
 import com.example.podcastapp.core.data.DownloadRepository
+import com.example.podcastapp.core.data.WaveformRepository
+import com.example.podcastapp.core.media.WaveformGenerator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,7 +29,9 @@ object DownloadModule {
         @ApplicationContext context: Context,
         downloadManager: DownloadManager,
         downloadRepository: DownloadRepository,
+        waveformRepository: WaveformRepository,
+        waveformGenerator: WaveformGenerator,
     ): DownloadController {
-        return DownloadController(context, downloadManager, downloadRepository)
+        return DownloadController(context, downloadManager, downloadRepository, waveformRepository, waveformGenerator)
     }
 }

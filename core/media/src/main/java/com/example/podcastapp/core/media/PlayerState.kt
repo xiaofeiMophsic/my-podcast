@@ -8,4 +8,5 @@ data class PlayerState(
     val positionMs: Long = 0,
     val durationMs: Long = 0,
     val episodeId: Long? = null,
+    val waveformBars: List<Float> = emptyList(),
 )

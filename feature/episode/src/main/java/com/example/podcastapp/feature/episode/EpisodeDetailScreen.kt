@@ -1,56 +1,62 @@
 package com.example.podcastapp.feature.episode
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Forward30
-import androidx.compose.material.icons.filled.Headset
-import androidx.compose.material.icons.filled.PauseCircleFilled
-import androidx.compose.material.icons.filled.PlayCircleFilled
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.text.HtmlCompat
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.podcastapp.core.database.DownloadStatus
 import com.example.podcastapp.core.media.PlayerState
-import java.util.concurrent.TimeUnit
+import com.example.podcastapp.core.ui.neo.NeoColors
+import com.example.podcastapp.core.ui.neo.NeoOutlineButton
+import com.example.podcastapp.core.ui.neo.NeoPrimaryButton
+import com.example.podcastapp.core.ui.neo.NeoTopBar
+import com.example.podcastapp.core.ui.neo.ShadowCard
+import com.example.podcastapp.core.ui.neo.NeoShapes
 
 @Composable
 fun EpisodeDetailRoute(
@@ -65,146 +71,150 @@ fun EpisodeDetailRoute(
         playerState = playerState,
         onBack = onBack,
         onTogglePlay = viewModel::togglePlay,
-        onSeek = viewModel::seekTo,
-        onForward = viewModel::skipForward,
-        onBackward = viewModel::skipBackward,
+        onSeekForward = viewModel::skipForward,
+        onSeekBackward = viewModel::skipBackward,
+        onDownload = viewModel::download,
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EpisodeDetailScreen(
     state: EpisodeDetailUiState,
     playerState: PlayerState,
     onBack: () -> Unit,
     onTogglePlay: () -> Unit,
-    onSeek: (Long) -> Unit,
-    onForward: () -> Unit,
-    onBackward: () -> Unit,
+    onSeekForward: () -> Unit,
+    onSeekBackward: () -> Unit,
+    onDownload: () -> Unit,
 ) {
-    var showDescription by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NeoColors.ScreenBg)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            NeoTopBar(title = "Episode", onBack = onBack)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        state.title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // 1. 页面中间显示音频大封面
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { showDescription = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Headset,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    )
-                    AsyncImage(
-                        model = state.imageUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-
-            // 2. 封面底下是字幕/标题
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = state.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                state.pubDate?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // 3. 最底下是播控区域
-            PlaybackControls(
-                playerState = playerState,
-                onTogglePlay = onTogglePlay,
-                onSeek = onSeek,
-                onForward = onForward,
-                onBackward = onBackward,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-
-    if (showDescription) {
-        ModalBottomSheet(
-            onDismissRequest = { showDescription = false },
-            sheetState = sheetState
-        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 48.dp)
+                    .padding(horizontal = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Text(
-                    text = state.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                state.description?.let {
-                    val styledDescription = HtmlCompat.fromHtml(it, HtmlCompat.FROM_HTML_MODE_LEGACY)
-                    Text(
-                        text = styledDescription.toString(), // 这里可以更进一步支持更多样式，目前先处理基本文本
-                        style = MaterialTheme.typography.bodyLarge,
-                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.2
-                    )
+                ShadowCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        state.imageUrl?.let {
+                            AsyncImage(
+                                model = it,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .size(180.dp),
+                            )
+                        }
+                        Text(
+                            text = state.title,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeoColors.TextPrimary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        state.pubDate?.let {
+                            Text(text = it, fontSize = 12.sp, color = NeoColors.TextSecondary)
+                        }
+                        state.description?.let {
+                            Text(
+                                text = it,
+                                fontSize = 13.sp,
+                                color = NeoColors.TextSecondary,
+                                maxLines = 6,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+
+                ShadowCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = onSeekBackward) {
+                                Icon(Icons.Default.Replay10, contentDescription = "Back 10s")
+                            }
+                            IconButton(onClick = onTogglePlay) {
+                                Icon(
+                                    imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = "Play/Pause",
+                                )
+                            }
+                            IconButton(onClick = onSeekForward) {
+                                Icon(Icons.Default.Forward30, contentDescription = "Forward 30s")
+                            }
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            when (state.downloadStatus) {
+                                DownloadStatus.COMPLETED -> {
+                                    DownloadProgressButton(
+                                        text = "Downloaded",
+                                        progress = 1f,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+
+                                DownloadStatus.DOWNLOADING -> {
+                                    DownloadProgressButton(
+                                        text = "Downloading…",
+                                        progress = state.downloadProgress,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+
+                                DownloadStatus.FAILED -> {
+                                    NeoOutlineButton(
+                                        text = "Retry Download",
+                                        onClick = onDownload,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+
+                                else -> {
+                                    NeoPrimaryButton(
+                                        text = "Download",
+                                        onClick = onDownload,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                            NeoOutlineButton(
+                                text = "Share",
+                                onClick = { /* TODO */ },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -212,95 +222,97 @@ fun EpisodeDetailScreen(
 }
 
 @Composable
-fun PlaybackControls(
-    playerState: PlayerState,
-    onTogglePlay: () -> Unit,
-    onSeek: (Long) -> Unit,
-    onForward: () -> Unit,
-    onBackward: () -> Unit,
-    modifier: Modifier = Modifier
+private fun DownloadProgressButton(
+    text: String,
+    progress: Float,
+    modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        // 播控区域上方为进度条
-        Slider(
-            value = playerState.positionMs.toFloat(),
-            onValueChange = { onSeek(it.toLong()) },
-            valueRange = 0f..playerState.durationMs.toFloat().coerceAtLeast(1f),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                formatTime(playerState.positionMs),
-                style = MaterialTheme.typography.labelSmall
-            )
-            Text(
-                formatTime(playerState.durationMs),
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-
-        // 下面是横排三个按钮。上一个，暂停/播放，下一个
-        Row(
+    val clamped = progress.coerceIn(0f, 1f)
+    Surface(
+        modifier = modifier.height(44.dp),
+        shape = NeoShapes.Card,
+        color = NeoColors.CardBg,
+        border = BorderStroke(1.dp, NeoColors.CardBorder),
+    ) {
+        BoxWithConstraints(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .clip(NeoShapes.Card),
         ) {
-            IconButton(
-                onClick = onBackward,
-                modifier = Modifier.size(48.dp)
+            val progressWidth = maxWidth * clamped
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Default.Replay10,
-                    contentDescription = "Rewind 10s",
-                    modifier = Modifier.size(32.dp)
+                val textMeasurer = rememberTextMeasurer()
+
+                // 平滑动画：处理轮询带来的突兀感
+                val animatedProgress by animateFloatAsState(
+                    targetValue = progress,
+                    animationSpec = tween(
+                        durationMillis = if (progress >= 1f) 200 else 800,
+                        easing = LinearEasing
+                    ),
+                    label = "SmoothProgress"
                 )
-            }
 
-            Spacer(modifier = Modifier.size(32.dp))
+                // 状态切换时的背景色过渡动画
+                val animatedBgColor by animateColorAsState(targetValue = NeoColors.CardBg as Color)
+                val animatedProgressColor by animateColorAsState(targetValue = NeoColors.AccentGreen)
 
-            IconButton(
-                onClick = onTogglePlay,
-                modifier = Modifier.size(72.dp)
-            ) {
-                Icon(
-                    imageVector = if (playerState.isPlaying) 
-                        Icons.Default.PauseCircleFilled 
-                    else 
-                        Icons.Default.PlayCircleFilled,
-                    contentDescription = "Play/Pause",
-                    modifier = Modifier.fillMaxSize(),
-                    tint = MaterialTheme.colorScheme.primary
+                val textStyle = TextStyle(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
-            }
 
-            Spacer(modifier = Modifier.size(32.dp))
+                Box(
+                    modifier = modifier
+                        .height(48.dp)
+                        .fillMaxWidth()
+                        .background(animatedBgColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val width = size.width
+                        val height = size.height
+                        val progressWidth = width * animatedProgress
 
-            IconButton(
-                onClick = onForward,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Forward30,
-                    contentDescription = "Forward 30s",
-                    modifier = Modifier.size(32.dp)
-                )
+                        drawRect(
+                            color = animatedProgressColor,
+                            size = Size(progressWidth, height)
+                        )
+
+                        // 测量文字
+                        val textLayoutResult = textMeasurer.measure(
+                            text = AnnotatedString(text),
+                            style = textStyle
+                        )
+                        val textOffset = Offset(
+                            (width - textLayoutResult.size.width) / 2f,
+                            (height - textLayoutResult.size.height) / 2f
+                        )
+
+                        drawText(
+                            textLayoutResult = textLayoutResult,
+                            color = NeoColors.TextPrimary,
+                            topLeft = textOffset
+                        )
+
+                        if (animatedProgress > 0f) {
+                            clipRect(right = progressWidth) {
+                                drawText(
+                                    textLayoutResult = textLayoutResult,
+                                    color = NeoColors.TextOnPrimary,
+                                    topLeft = textOffset
+                                )
+                            }
+                        }
+                    }
+                }
+
             }
         }
     }
 }
 
-private fun formatTime(ms: Long): String {
-    val hours = TimeUnit.MILLISECONDS.toHours(ms)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
-    return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format("%02d:%02d", minutes, seconds)
-    }
-}

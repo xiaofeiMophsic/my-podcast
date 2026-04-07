@@ -36,6 +36,9 @@ interface EpisodeDao {
     @Query("SELECT * FROM episodes WHERE title LIKE '%' || :query || '%' ORDER BY pubDate DESC")
     fun searchPaging(query: String): PagingSource<Int, EpisodeEntity>
 
+    @Query("SELECT * FROM episodes WHERE podcastId = :podcastId ORDER BY pubDate DESC LIMIT :limit")
+    fun observeLatestByPodcast(podcastId: Long, limit: Int): Flow<List<EpisodeEntity>>
+
     @Query("SELECT id, guid FROM episodes WHERE podcastId = :podcastId")
     suspend fun getEpisodeIdsByPodcast(podcastId: Long): List<EpisodeIdAndGuid>
 
@@ -74,4 +77,13 @@ interface DownloadDao {
 
     @Update
     suspend fun update(item: DownloadEntity)
+}
+
+@Dao
+interface WaveformDao {
+    @Query("SELECT * FROM episode_waveforms WHERE episodeId = :episodeId")
+    suspend fun getByEpisodeId(episodeId: Long): EpisodeWaveformEntity?
+
+    @Upsert
+    suspend fun upsert(item: EpisodeWaveformEntity)
 }

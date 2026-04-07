@@ -19,7 +19,8 @@ import com.example.podcastapp.feature.download.DownloadRoute
 import com.example.podcastapp.feature.episode.EpisodeDetailRoute
 import com.example.podcastapp.feature.episode.EpisodeListRoute
 import com.example.podcastapp.feature.episode.SearchRoute
-import com.example.podcastapp.feature.podcast.HomeScreen
+import com.example.podcastapp.feature.podcast.AddRssRoute
+import com.example.podcastapp.feature.podcast.HomeRoute
 import com.example.podcastapp.feature.podcast.PodcastListRoute
 import com.example.podcastapp.navigation.NavRoutes
 import com.example.podcastapp.ui.theme.AppTheme
@@ -52,9 +53,10 @@ private fun AppRoot() {
 
     NavHost(navController = navController, startDestination = NavRoutes.HOME) {
         composable(NavRoutes.HOME) {
-            HomeScreen(
+            HomeRoute(
                 onSearchClick = { navController.navigate(NavRoutes.SEARCH) },
                 onPlayerClick = { navController.navigate(NavRoutes.NOW_PLAYING) },
+                onAddRssClick = { navController.navigate(NavRoutes.ADD_RSS) },
             )
         }
         composable(NavRoutes.NOW_PLAYING) {
@@ -79,6 +81,9 @@ private fun AppRoot() {
         }
         composable(NavRoutes.DOWNLOADS) {
             DownloadRoute(onBack = { navController.popBackStack() })
+        }
+        composable(NavRoutes.ADD_RSS) {
+            AddRssRoute(onBack = { navController.popBackStack() })
         }
         composable(
             route = "${NavRoutes.EPISODE_LIST}/{${NavRoutes.ARG_PODCAST_ID}}",

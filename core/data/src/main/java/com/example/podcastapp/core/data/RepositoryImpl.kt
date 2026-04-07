@@ -2,12 +2,14 @@ package com.example.podcastapp.core.data
 
 import com.example.podcastapp.core.database.DownloadDao
 import com.example.podcastapp.core.database.DownloadEntity
+import com.example.podcastapp.core.database.EpisodeWaveformEntity
 import com.example.podcastapp.core.database.EpisodeDao
 import com.example.podcastapp.core.database.EpisodeEntity
 import com.example.podcastapp.core.database.PodcastDao
 import com.example.podcastapp.core.database.PodcastEntity
 import com.example.podcastapp.core.database.SubscriptionDao
 import com.example.podcastapp.core.database.SubscriptionEntity
+import com.example.podcastapp.core.database.WaveformDao
 import com.example.podcastapp.core.network.RssFetcher
 import kotlinx.coroutines.flow.Flow
 
@@ -68,6 +70,9 @@ class EpisodeRepositoryImpl(
 
     override fun searchPaging(query: String) = episodeDao.searchPaging(query)
 
+    override fun observeLatestEpisodes(podcastId: Long, limit: Int) =
+        episodeDao.observeLatestByPodcast(podcastId, limit)
+
     override suspend fun refreshEpisodes(podcastId: Long) {
         val podcast = podcastDao.getPodcast(podcastId) ?: return
         val feed = rssFetcher.fetch(podcast.feedUrl)
@@ -109,5 +114,29 @@ class DownloadRepositoryImpl(
 
     override suspend fun upsert(download: DownloadEntity) {
         downloadDao.upsert(download)
+    }
+}
+
+class WaveformRepositoryImpl(
+    private val waveformDao: WaveformDao,
+) : WaveformRepository {
+
+    override suspend fun getWaveform(episodeId: Long): List<Float>? {
+        val entity = waveformDao.getByEpisodeId(episodeId) ?: return null
+        if (entity.barsCsv.isBlank()) return null
+        return entity.barsCsv.split(",")
+            .mapNotNull { it.toFloatOrNull() }
+            .map { it.coerceIn(0f, 1f) }
+    }
+
+    override suspend fun saveWaveform(episodeId: Long, bars: List<Float>) {
+        val csv = bars.joinToString(separator = ",") { it.coerceIn(0f, 1f).toString() }
+        waveformDao.upsert(
+            EpisodeWaveformEntity(
+                episodeId = episodeId,
+                barsCsv = csv,
+                updatedAt = System.currentTimeMillis(),
+            )
+        )
     }
 }

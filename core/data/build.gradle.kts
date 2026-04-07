@@ -18,6 +18,7 @@ android {
 dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:database"))
+    implementation(project(":core:media"))
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.paging.runtime)

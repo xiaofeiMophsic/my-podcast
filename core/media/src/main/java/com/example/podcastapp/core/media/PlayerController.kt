@@ -14,11 +14,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.core.net.toUri
 
 class PlayerController(private val context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private val waveformGenerator = WaveformGenerator(context)
+    private var staticWaveform: List<Float>? = null
+    private var waveformJob: Job? = null
 
     internal val player: ExoPlayer = ExoPlayer.Builder(context).build()
 
@@ -48,20 +54,29 @@ class PlayerController(private val context: Context) {
 
         scope.launch {
             while (isActive) {
-                updateState(positionMs = player.currentPosition.coerceAtLeast(0L))
+                updateState(
+                    positionMs = player.currentPosition.coerceAtLeast(0L),
+                )
                 delay(500)
             }
         }
     }
 
-    fun playEpisode(episodeId: Long, title: String, url: String, artist: String? = null, imageUrl: String? = null) {
+    fun playEpisode(
+        episodeId: Long,
+        title: String,
+        url: String,
+        artist: String? = null,
+        imageUrl: String? = null
+    ) {
         ensureServiceStarted()
+        waveformJob?.cancel()
         val mediaMetadata = MediaMetadata.Builder()
             .setTitle(title)
             .setArtist(artist)
             .setArtworkUri(imageUrl?.toUri())
             .build()
-            
+
         val mediaItem = MediaItem.Builder()
             .setUri(url)
             .setMediaId(episodeId.toString())
@@ -71,6 +86,15 @@ class PlayerController(private val context: Context) {
         player.prepare()
         player.play()
         updateState(title = title, artist = artist, imageUrl = imageUrl, episodeId = episodeId)
+
+        if (staticWaveform.isNullOrEmpty()) {
+            waveformJob = scope.launch(Dispatchers.IO) {
+                val bars = waveformGenerator.generate(url.toUri())
+                if (bars.isNotEmpty()) {
+                    withContext(Dispatchers.Main) { setStaticWaveform(bars) }
+                }
+            }
+        }
     }
 
     fun play() {
@@ -82,6 +106,11 @@ class PlayerController(private val context: Context) {
 
     fun seekTo(positionMs: Long) {
         player.seekTo(positionMs)
+    }
+
+    fun setStaticWaveform(bars: List<Float>?) {
+        staticWaveform = bars
+        updateState(waveformBars = bars ?: emptyList())
     }
 
     private fun ensureServiceStarted() {
@@ -97,6 +126,7 @@ class PlayerController(private val context: Context) {
         positionMs: Long? = null,
         durationMs: Long? = null,
         episodeId: Long? = null,
+        waveformBars: List<Float>? = null,
     ) {
         val current = _state.value
         _state.value = current.copy(
@@ -107,6 +137,7 @@ class PlayerController(private val context: Context) {
             positionMs = positionMs ?: current.positionMs,
             durationMs = durationMs ?: current.durationMs,
             episodeId = episodeId ?: current.episodeId,
+            waveformBars = waveformBars ?: current.waveformBars,
         )
     }
 }

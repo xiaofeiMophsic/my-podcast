@@ -1,31 +1,32 @@
 package com.example.podcastapp.feature.download
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.podcastapp.core.database.DownloadEntity
 import com.example.podcastapp.core.database.DownloadStatus
+import com.example.podcastapp.core.ui.neo.NeoColors
+import com.example.podcastapp.core.ui.neo.NeoTopBar
+import com.example.podcastapp.core.ui.neo.ShadowCard
 
 @Composable
 fun DownloadRoute(
@@ -36,63 +37,62 @@ fun DownloadRoute(
     DownloadScreen(downloads = downloads, onBack = onBack)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadScreen(
     downloads: List<DownloadEntity>,
     onBack: () -> Unit,
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Downloads") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(downloads) { item ->
-                DownloadRow(item)
-            }
-        }
-    }
-}
+    Box(modifier = Modifier.fillMaxSize().background(NeoColors.ScreenBg)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            NeoTopBar(title = "Downloads", onBack = onBack)
 
-@Composable
-private fun DownloadRow(item: DownloadEntity) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = "Episode #${item.episodeId}",
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = statusLabel(item.status),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            item.localPath?.let {
+            AnimatedVisibility(visible = downloads.isEmpty()) {
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    text = "No downloads yet",
+                    fontSize = 12.sp,
+                    color = NeoColors.TextSecondary,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
                 )
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(downloads) { item ->
+                    ShadowCard(modifier = Modifier.fillMaxWidth().animateContentSize()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = "Episode #${item.episodeId}",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeoColors.TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = statusLabel(item.status),
+                                fontSize = 12.sp,
+                                color = NeoColors.AccentGreen,
+                            )
+                            item.localPath?.let {
+                                Text(
+                                    text = it,
+                                    fontSize = 12.sp,
+                                    color = NeoColors.TextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

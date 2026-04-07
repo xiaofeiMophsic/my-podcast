@@ -21,6 +21,7 @@ interface EpisodeRepository {
     fun searchPaging(query: String): PagingSource<Int, EpisodeEntity>
     suspend fun refreshEpisodes(podcastId: Long)
     suspend fun getEpisode(episodeId: Long): EpisodeEntity?
+    fun observeLatestEpisodes(podcastId: Long, limit: Int): Flow<List<EpisodeEntity>>
 }
 
 interface DownloadRepository {
@@ -28,4 +29,9 @@ interface DownloadRepository {
     suspend fun getByEpisode(episodeId: Long): DownloadEntity?
     suspend fun getByDownloadManagerId(downloadManagerId: Long): DownloadEntity?
     suspend fun upsert(download: DownloadEntity)
+}
+
+interface WaveformRepository {
+    suspend fun getWaveform(episodeId: Long): List<Float>?
+    suspend fun saveWaveform(episodeId: Long, bars: List<Float>)
 }

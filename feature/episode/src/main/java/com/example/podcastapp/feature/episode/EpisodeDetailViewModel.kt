@@ -7,6 +7,8 @@ import com.example.podcastapp.core.data.DownloadController
 import com.example.podcastapp.core.data.DownloadRepository
 import com.example.podcastapp.core.database.DownloadStatus
 import com.example.podcastapp.core.data.EpisodeRepository
+import com.example.podcastapp.core.data.WaveformRepository
+import com.example.podcastapp.core.database.DownloadEntity
 import com.example.podcastapp.core.media.PlayerController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +27,7 @@ class EpisodeDetailViewModel @Inject constructor(
     private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val playerController: PlayerController,
+    private val waveformRepository: WaveformRepository,
 ) : ViewModel() {
 
     private val episodeId: Long = checkNotNull(savedStateHandle["episodeId"])
@@ -60,6 +63,7 @@ class EpisodeDetailViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     downloadStatus = current.status,
                     localPath = current.localPath,
+                    downloadProgress = computeProgress(current),
                 )
             }
         }
@@ -80,7 +84,11 @@ class EpisodeDetailViewModel @Inject constructor(
         val id = current.episodeId ?: return
         val url = current.localPath ?: current.audioUrl ?: return
         val title = current.title
-        playerController.playEpisode(id, title, url, imageUrl = current.imageUrl)
+        viewModelScope.launch {
+            val waveform = waveformRepository.getWaveform(id)
+            playerController.setStaticWaveform(waveform)
+            playerController.playEpisode(id, title, url, imageUrl = current.imageUrl)
+        }
     }
 
     fun togglePlay() {
@@ -121,4 +129,15 @@ data class EpisodeDetailUiState(
     val episodeId: Long? = null,
     val downloadStatus: DownloadStatus = DownloadStatus.QUEUED,
     val localPath: String? = null,
+    val downloadProgress: Float = 0f,
 )
+
+private fun computeProgress(item: DownloadEntity): Float {
+    return when {
+        item.status == DownloadStatus.COMPLETED -> 1f
+        item.totalBytes > 0f ->
+            (item.downloadedBytes.toFloat() / item.totalBytes.toFloat()).coerceIn(0f, 1f)
+        item.progress > 0 -> (item.progress / 100f).coerceIn(0f, 1f)
+        else -> 0f
+    }
+}

@@ -8,6 +8,7 @@ object NavRoutes {
     const val EPISODE_DETAIL = "episode_detail"
     const val SEARCH = "search"
     const val DOWNLOADS = "downloads"
+    const val ADD_RSS = "add_rss"
 
     const val ARG_PODCAST_ID = "podcastId"
     const val ARG_EPISODE_ID = "episodeId"

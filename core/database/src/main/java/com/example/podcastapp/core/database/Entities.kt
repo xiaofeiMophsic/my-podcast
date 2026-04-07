@@ -62,7 +62,7 @@ data class DownloadEntity(
     val localPath: String? = null,
     val status: DownloadStatus = DownloadStatus.QUEUED,
     val progress: Int = 0,
-    val totalBytes: Long? = null,
+    val totalBytes: Long = 0,
     val downloadedBytes: Long = 0,
     val createdAt: Long,
     val updatedAt: Long,
