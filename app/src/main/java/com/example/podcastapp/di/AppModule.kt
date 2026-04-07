@@ -2,18 +2,23 @@ package com.example.podcastapp.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.podcastapp.core.data.DownloadRepository
 import com.example.podcastapp.core.data.DownloadRepositoryImpl
 import com.example.podcastapp.core.data.EpisodeRepository
 import com.example.podcastapp.core.data.EpisodeRepositoryImpl
 import com.example.podcastapp.core.data.PodcastRepository
 import com.example.podcastapp.core.data.PodcastRepositoryImpl
+import com.example.podcastapp.core.data.SearchHistoryRepository
+import com.example.podcastapp.core.data.SearchHistoryRepositoryImpl
 import com.example.podcastapp.core.data.WaveformRepository
 import com.example.podcastapp.core.data.WaveformRepositoryImpl
 import com.example.podcastapp.core.database.AppDatabase
 import com.example.podcastapp.core.database.DownloadDao
 import com.example.podcastapp.core.database.EpisodeDao
 import com.example.podcastapp.core.database.PodcastDao
+import com.example.podcastapp.core.database.SearchHistoryDao
 import com.example.podcastapp.core.database.SubscriptionDao
 import com.example.podcastapp.core.database.WaveformDao
 import com.example.podcastapp.core.media.WaveformGenerator
@@ -50,7 +55,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, "podcast.db")
-            .fallbackToDestructiveMigration()
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
             .build()
     }
 
@@ -59,6 +64,7 @@ object AppModule {
     @Provides fun provideSubscriptionDao(db: AppDatabase): SubscriptionDao = db.subscriptionDao()
     @Provides fun provideDownloadDao(db: AppDatabase): DownloadDao = db.downloadDao()
     @Provides fun provideWaveformDao(db: AppDatabase): WaveformDao = db.waveformDao()
+    @Provides fun provideSearchHistoryDao(db: AppDatabase): SearchHistoryDao = db.searchHistoryDao()
 
     @Provides
     @Singleton
@@ -90,7 +96,36 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideSearchHistoryRepository(
+        searchHistoryDao: SearchHistoryDao,
+    ): SearchHistoryRepository = SearchHistoryRepositoryImpl(searchHistoryDao)
+
+    @Provides
+    @Singleton
     fun provideWaveformGenerator(
         @ApplicationContext context: Context,
     ): WaveformGenerator = WaveformGenerator(context)
+
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // No schema changes between v2 and v3; version bump only.
+        }
+    }
+
+    private val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `search_history` (" +
+                    "`normalized` TEXT NOT NULL, " +
+                    "`query` TEXT NOT NULL, " +
+                    "`updatedAt` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`normalized`)" +
+                ")"
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_search_history_updatedAt` " +
+                    "ON `search_history` (`updatedAt`)"
+            )
+        }
+    }
 }

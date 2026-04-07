@@ -87,3 +87,23 @@ interface WaveformDao {
     @Upsert
     suspend fun upsert(item: EpisodeWaveformEntity)
 }
+
+@Dao
+interface SearchHistoryDao {
+    @Query("SELECT * FROM search_history ORDER BY updatedAt DESC LIMIT :limit")
+    fun observeRecent(limit: Int): Flow<List<SearchHistoryEntity>>
+
+    @Upsert
+    suspend fun upsert(item: SearchHistoryEntity)
+
+    @Query(
+        "DELETE FROM search_history " +
+            "WHERE normalized NOT IN (" +
+            "SELECT normalized FROM search_history ORDER BY updatedAt DESC LIMIT :limit" +
+            ")"
+    )
+    suspend fun trimTo(limit: Int)
+
+    @Query("DELETE FROM search_history")
+    suspend fun clear()
+}

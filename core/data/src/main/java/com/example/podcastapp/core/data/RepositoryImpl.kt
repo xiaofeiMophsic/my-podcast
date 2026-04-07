@@ -10,8 +10,11 @@ import com.example.podcastapp.core.database.PodcastEntity
 import com.example.podcastapp.core.database.SubscriptionDao
 import com.example.podcastapp.core.database.SubscriptionEntity
 import com.example.podcastapp.core.database.WaveformDao
+import com.example.podcastapp.core.database.SearchHistoryDao
+import com.example.podcastapp.core.database.SearchHistoryEntity
 import com.example.podcastapp.core.network.RssFetcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class PodcastRepositoryImpl(
     private val podcastDao: PodcastDao,
@@ -138,5 +141,32 @@ class WaveformRepositoryImpl(
                 updatedAt = System.currentTimeMillis(),
             )
         )
+    }
+}
+
+class SearchHistoryRepositoryImpl(
+    private val searchHistoryDao: SearchHistoryDao,
+) : SearchHistoryRepository {
+
+    override fun observeHistory(limit: Int): Flow<List<String>> {
+        return searchHistoryDao.observeRecent(limit).map { items -> items.map { it.query } }
+    }
+
+    override suspend fun addQuery(query: String, maxItems: Int) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return
+        val normalized = trimmed.lowercase()
+        searchHistoryDao.upsert(
+            SearchHistoryEntity(
+                normalized = normalized,
+                query = trimmed,
+                updatedAt = System.currentTimeMillis(),
+            )
+        )
+        searchHistoryDao.trimTo(maxItems)
+    }
+
+    override suspend fun clear() {
+        searchHistoryDao.clear()
     }
 }

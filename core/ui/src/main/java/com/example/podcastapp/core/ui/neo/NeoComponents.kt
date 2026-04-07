@@ -31,7 +31,7 @@ fun ShadowCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier = modifier) {
+    Box(modifier = modifier.padding(end = 4.dp, bottom = 4.dp)) {
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -144,6 +144,7 @@ fun NeoTextField(
     placeholder: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    inputModifier: Modifier = Modifier,
 ) {
     ShadowCard(modifier = modifier) {
         Box(
@@ -163,7 +164,7 @@ fun NeoTextField(
                     color = if (enabled) NeoColors.TextPrimary else NeoColors.TextSecondary,
                     fontSize = 14.sp,
                 ),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = inputModifier.fillMaxWidth(),
             )
         }
     }

@@ -57,6 +57,7 @@ import com.example.podcastapp.core.ui.neo.NeoPrimaryButton
 import com.example.podcastapp.core.ui.neo.NeoTopBar
 import com.example.podcastapp.core.ui.neo.ShadowCard
 import com.example.podcastapp.core.ui.neo.NeoShapes
+import com.example.podcastapp.core.ui.utils.htmlToAnnotatedString
 
 @Composable
 fun EpisodeDetailRoute(
@@ -117,8 +118,9 @@ fun EpisodeDetailScreen(
                                 model = it,
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .size(180.dp),
+                                    .size(180.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .align(Alignment.CenterHorizontally),
                             )
                         }
                         Text(
@@ -134,7 +136,7 @@ fun EpisodeDetailScreen(
                         }
                         state.description?.let {
                             Text(
-                                text = it,
+                                text = it.htmlToAnnotatedString(),
                                 fontSize = 13.sp,
                                 color = NeoColors.TextSecondary,
                                 maxLines = 6,

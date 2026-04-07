@@ -35,3 +35,9 @@ interface WaveformRepository {
     suspend fun getWaveform(episodeId: Long): List<Float>?
     suspend fun saveWaveform(episodeId: Long, bars: List<Float>)
 }
+
+interface SearchHistoryRepository {
+    fun observeHistory(limit: Int = 8): Flow<List<String>>
+    suspend fun addQuery(query: String, maxItems: Int = 8)
+    suspend fun clear()
+}

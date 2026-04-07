@@ -29,7 +29,6 @@ android {
 dependencies {
     implementation(project(":core:ui"))
     implementation(project(":core:database"))
-    implementation(project(":core:datastore"))
     implementation(project(":core:data"))
     implementation(project(":core:media"))
     implementation(project(":core:player"))

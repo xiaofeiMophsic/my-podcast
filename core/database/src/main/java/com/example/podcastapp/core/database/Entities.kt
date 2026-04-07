@@ -3,6 +3,7 @@ package com.example.podcastapp.core.database
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 
 @Entity(
     tableName = "podcasts",
@@ -79,4 +80,14 @@ enum class DownloadStatus {
 data class EpisodeIdAndGuid(
     val id: Long,
     val guid: String,
+)
+
+@Entity(
+    tableName = "search_history",
+    indices = [Index(value = ["updatedAt"])],
+)
+data class SearchHistoryEntity(
+    @PrimaryKey val normalized: String,
+    @ColumnInfo(collate = ColumnInfo.NOCASE) val query: String,
+    val updatedAt: Long,
 )

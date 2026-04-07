@@ -11,8 +11,9 @@ import androidx.room.TypeConverters
         SubscriptionEntity::class,
         DownloadEntity::class,
         EpisodeWaveformEntity::class,
+        SearchHistoryEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -22,4 +23,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun subscriptionDao(): SubscriptionDao
     abstract fun downloadDao(): DownloadDao
     abstract fun waveformDao(): WaveformDao
+    abstract fun searchHistoryDao(): SearchHistoryDao
 }
