@@ -55,7 +55,7 @@ private fun AppRoot() {
         composable(NavRoutes.HOME) {
             HomeRoute(
                 onSearchClick = { navController.navigate(NavRoutes.SEARCH) },
-                onPlayerClick = { navController.navigate(NavRoutes.NOW_PLAYING) },
+                onPlayerClick = { episodeId -> navController.navigate(NavRoutes.nowPlayingRoute(episodeId)) },
                 onAddRssClick = { navController.navigate(NavRoutes.ADD_RSS) },
             )
         }

@@ -210,7 +210,7 @@ fun SearchScreen(
                                     )
                                     item.description?.let {
                                         Text(
-                                            text = it.htmlToAnnotatedString(),
+                                            text = it,
                                             fontSize = 13.sp,
                                             color = NeoColors.TextSecondary,
                                             maxLines = 2,

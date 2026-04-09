@@ -1,16 +1,22 @@
 package com.example.podcastapp.core.player
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.podcastapp.core.data.DownloadRepository
 import com.example.podcastapp.core.data.EpisodeRepository
+import com.example.podcastapp.core.media.MetadataState
 import com.example.podcastapp.core.media.PlayerController
 import com.example.podcastapp.core.media.PlayerState
+import com.example.podcastapp.core.ui.utils.htmlToAnnotatedString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -25,8 +31,22 @@ class PlayerViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
 ) : ViewModel() {
 
-    val state: StateFlow<PlayerState> = controller.state
+    val playerState: StateFlow<PlayerState> = controller.state
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlayerState())
+
+    val metadataState = playerState.map {
+        MetadataState(
+            title = it.title,
+            artist = it.artist,
+            imageUrl = it.imageUrl,
+            durationMs = it.durationMs,
+            episodeId = it.episodeId,
+            waveformBars = it.waveformBars
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MetadataState())
+
+    val progressState = playerState.map { it.positionMs }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    val playingState = playerState.map { it.isPlaying }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _episodeDetail = MutableStateFlow(NowPlayingEpisodeDetail())
     val episodeDetail: StateFlow<NowPlayingEpisodeDetail> = _episodeDetail.asStateFlow()
@@ -59,18 +79,25 @@ class PlayerViewModel @Inject constructor(
                 id = episode.id,
                 title = episode.title,
                 description = episode.description,
+                annotatedDesc = episode.description?.htmlToAnnotatedString(),
                 imageUrl = episode.imageUrl,
                 pubDate = episode.pubDate?.let { dateFormatter.format(Date(it)) },
             )
         }
     }
 
-    fun playEpisode(episodeId: Long, title: String, url: String, artist: String? = null, imageUrl: String? = null) {
+    fun playEpisode(
+        episodeId: Long,
+        title: String,
+        url: String,
+        artist: String? = null,
+        imageUrl: String? = null
+    ) {
         controller.playEpisode(episodeId, title, url, artist, imageUrl)
     }
 
-    fun togglePlayPause(isPlaying: Boolean) {
-        if (isPlaying) controller.pause() else controller.play()
+    fun togglePlayPause() {
+        if (playingState.value) controller.pause() else controller.play()
     }
 
     fun seekTo(positionMs: Long) {
@@ -78,10 +105,12 @@ class PlayerViewModel @Inject constructor(
     }
 }
 
+@Immutable
 data class NowPlayingEpisodeDetail(
     val id: Long? = null,
     val title: String = "",
     val description: String? = null,
+    val annotatedDesc: AnnotatedString? = null,
     val imageUrl: String? = null,
     val pubDate: String? = null,
 )

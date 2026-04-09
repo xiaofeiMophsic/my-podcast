@@ -66,7 +66,7 @@ private const val NAV_SEARCH      = "https://www.figma.com/api/mcp/asset/8db57dd
 @Composable
 fun HomeRoute(
     onSearchClick: () -> Unit = {},
-    onPlayerClick: () -> Unit = {},
+    onPlayerClick: (episodeId: Long) -> Unit = {},
     onAddRssClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -76,8 +76,8 @@ fun HomeRoute(
         onSearchClick = onSearchClick,
         onAddRssClick = onAddRssClick,
         onEpisodeClick = { episode ->
-            viewModel.playEpisode(episode)
-            onPlayerClick()
+//            viewModel.playEpisode(episode)
+            onPlayerClick(episode.id)
         },
     )
 }

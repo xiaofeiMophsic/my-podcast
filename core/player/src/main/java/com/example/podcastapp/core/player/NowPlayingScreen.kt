@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -63,16 +64,15 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.podcastapp.feature.player.R
 import com.example.podcastapp.core.ui.neo.ShadowCard
-import com.example.podcastapp.core.ui.utils.htmlToAnnotatedString
 import kotlin.math.roundToInt
 
 // --- Design tokens ---
-private val ScreenBg        = Color(0xFFFFFFED)  // #FFFFED
-private val AccentGreen     = Color(0xFF87B800)
-private val WaveGray        = Color(0xFFC4C4C4)
-private val TextPrimary     = Color(0xFF000000)
-private val CardBorder      = Color(0xFF000000)
-private val AlbumCardBg     = Color(0xFFFFFFFF)
+private val ScreenBg = Color(0xFFFFFFED)  // #FFFFED
+private val AccentGreen = Color(0xFF87B800)
+private val WaveGray = Color(0xFFC4C4C4)
+private val TextPrimary = Color(0xFF000000)
+private val CardBorder = Color(0xFF000000)
+private val AlbumCardBg = Color(0xFFFFFFFF)
 
 // --- Waveform data (normalised 0..1, derived from Figma pixel heights, max=66.3px) ---
 private data class WaveBar(val height: Float)
@@ -100,15 +100,24 @@ private val WAVEFORM: List<WaveBar> = listOf(
 )
 
 // Asset URLs (Figma MCP, valid 7 days)
-private const val ALBUM_COVER  = "https://www.figma.com/api/mcp/asset/6ee017b6-7ee4-4703-bf43-f4d9ad27bafd"
-private const val DOTS_DECO    = "https://www.figma.com/api/mcp/asset/23cb03d4-760f-433f-abf3-022b992aa0e8"
-private const val IC_BACK      = "https://www.figma.com/api/mcp/asset/000d493b-3ea5-47a6-b2d1-9f9a35b6109c"
-private const val IC_HEART     = "https://www.figma.com/api/mcp/asset/0f849085-4cba-46aa-945c-b1e38fc2bf11"
-private const val IC_REPEAT    = "https://www.figma.com/api/mcp/asset/2c558165-f0fb-47b5-94b0-46b833787304"
-private const val IC_PREV      = "https://www.figma.com/api/mcp/asset/430f9f9f-5824-42b3-8bc9-7d41811abed7"
-private const val IC_PLAY      = "https://www.figma.com/api/mcp/asset/a41687f2-4e16-41fb-8641-d5a55b88bb8a"
-private const val IC_NEXT      = "https://www.figma.com/api/mcp/asset/58602731-3143-4af5-83c6-7cd52b71b5b7"
-private const val IC_MORE      = "https://www.figma.com/api/mcp/asset/94acd51b-3167-4226-95d6-1f7fccf44851"
+private const val ALBUM_COVER =
+    "https://www.figma.com/api/mcp/asset/6ee017b6-7ee4-4703-bf43-f4d9ad27bafd"
+private const val DOTS_DECO =
+    "https://www.figma.com/api/mcp/asset/23cb03d4-760f-433f-abf3-022b992aa0e8"
+private const val IC_BACK =
+    "https://www.figma.com/api/mcp/asset/000d493b-3ea5-47a6-b2d1-9f9a35b6109c"
+private const val IC_HEART =
+    "https://www.figma.com/api/mcp/asset/0f849085-4cba-46aa-945c-b1e38fc2bf11"
+private const val IC_REPEAT =
+    "https://www.figma.com/api/mcp/asset/2c558165-f0fb-47b5-94b0-46b833787304"
+private const val IC_PREV =
+    "https://www.figma.com/api/mcp/asset/430f9f9f-5824-42b3-8bc9-7d41811abed7"
+private const val IC_PLAY =
+    "https://www.figma.com/api/mcp/asset/a41687f2-4e16-41fb-8641-d5a55b88bb8a"
+private const val IC_NEXT =
+    "https://www.figma.com/api/mcp/asset/58602731-3143-4af5-83c6-7cd52b71b5b7"
+private const val IC_MORE =
+    "https://www.figma.com/api/mcp/asset/94acd51b-3167-4226-95d6-1f7fccf44851"
 
 @Composable
 fun NowPlayingRoute(
@@ -117,45 +126,42 @@ fun NowPlayingRoute(
     onOpenDownloads: () -> Unit = {},
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.metadataState.collectAsState()
     val detail by viewModel.episodeDetail.collectAsState()
 
     LaunchedEffect(targetEpisodeId) {
         targetEpisodeId?.let { viewModel.playEpisodeById(it) }
     }
     LaunchedEffect(state.episodeId) {
-        viewModel.refreshEpisodeDetail(state.episodeId)
+//        viewModel.refreshEpisodeDetail(state.episodeId)
     }
-
-    val progress by remember {
-        derivedStateOf {
-            if (state.durationMs > 0) {
-                (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
-            } else 0.518f
-        }
-    }
-
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = tween(durationMillis = 120, easing = LinearEasing),
-        label = "waveformProgress",
-    )
 
     NowPlayingScreen(
-        title     = state.title.ifBlank { "Take My Breath" },
-        artist    = state.artist ?: "The Weeknd",
-        imageUrl  = state.imageUrl ?: ALBUM_COVER,
-        isPlaying = state.isPlaying,
+        title = state.title.ifBlank { "Take My Breath" },
+        artist = state.artist ?: "The Weeknd",
+        imageUrl = state.imageUrl ?: ALBUM_COVER,
+        isPlaying = { viewModel.playingState.value },
         durationMs = state.durationMs,
-        progress  = animatedProgress,
-        waveformBars = state.waveformBars,
+        progress = {
+            if (state.durationMs > 0) {
+                (viewModel.progressState.value.toFloat() / state.durationMs).coerceIn(0f, 1f)
+            } else 0f
+        },
+        waveformBars = { state.waveformBars },
         detail = detail,
-        onBack          = onBack,
+        onBack = onBack,
         onOpenDownloads = onOpenDownloads,
-        onTogglePlay    = { viewModel.togglePlayPause(state.isPlaying) },
-        onSeekPrev      = { viewModel.seekTo(maxOf(0, state.positionMs - 10_000)) },
-        onSeekNext      = { viewModel.seekTo(minOf(state.durationMs, state.positionMs + 30_000)) },
-        onSeekTo        = { fraction ->
+        onTogglePlay = { viewModel.togglePlayPause() },
+        onSeekPrev = { viewModel.seekTo(maxOf(0, viewModel.progressState.value - 10_000)) },
+        onSeekNext = {
+            viewModel.seekTo(
+                minOf(
+                    state.durationMs,
+                    viewModel.progressState.value + 30_000
+                )
+            )
+        },
+        onSeekTo = { fraction ->
             val target = (state.durationMs * fraction).toLong().coerceAtLeast(0L)
             viewModel.seekTo(target)
         },
@@ -167,10 +173,10 @@ fun NowPlayingScreen(
     title: String,
     artist: String,
     imageUrl: String,
-    isPlaying: Boolean,
+    isPlaying: () -> Boolean,
     durationMs: Long,
-    progress: Float,
-    waveformBars: List<Float>,
+    progress: () -> Float,
+    waveformBars: () -> List<Float>,
     detail: NowPlayingEpisodeDetail,
     onBack: () -> Unit,
     onOpenDownloads: () -> Unit,
@@ -182,8 +188,13 @@ fun NowPlayingScreen(
     var scrubFraction by remember { mutableStateOf<Float?>(null) }
     var showDetailSheet by remember { mutableStateOf(false) }
     var showTopMenu by remember { mutableStateOf(false) }
-    val showFraction = scrubFraction ?: progress
-    val showTime = formatTimeFromFraction(showFraction, durationMs)
+
+    // Cache WaveBar list - only recreate when waveformBars actually changes
+    val cachedBarsState by rememberUpdatedState(waveformBars)
+    val cachedBars = {
+        val bars = cachedBarsState()
+        if (bars.isNotEmpty()) bars.map { WaveBar(it) } else WAVEFORM
+    }
 
     Box(
         modifier = Modifier
@@ -236,7 +247,10 @@ fun NowPlayingScreen(
                         color = Color.Black,
                         border = BorderStroke(0.75.dp, Color(0xFFD9D9D9)),
                     ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
                             Text(
                                 text = "⋮",
                                 color = Color.White,
@@ -283,7 +297,7 @@ fun NowPlayingScreen(
 
             // Waveform
             AudioWaveform(
-                bars = if (waveformBars.isNotEmpty()) waveformBars.map { WaveBar(it) } else WAVEFORM,
+                bars = cachedBars,
                 progress = progress,
                 onSeekTo = onSeekTo,
                 onScrub = { scrubFraction = it },
@@ -294,15 +308,13 @@ fun NowPlayingScreen(
             )
 
             if (scrubFraction != null) {
-                Text(
-                    text = "${showTime} / ${formatDuration(durationMs)}",
-                    fontSize = 12.sp,
-                    color = TextPrimary,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .align(Alignment.CenterHorizontally),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                ShowTime(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    showTime = {
+                        val showFraction = scrubFraction ?: progress()
+                        formatTimeFromFraction(showFraction, durationMs)
+                    },
+                    durationMs = durationMs,
                 )
             }
 
@@ -316,28 +328,6 @@ fun NowPlayingScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onTogglePlay,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 260.dp)
-                    .height(52.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentGreen),
-                border = BorderStroke(1.dp, Color.White),
-            ) {
-                Text(
-                    text = if (isPlaying) {
-                        stringResource(R.string.action_pause)
-                    } else {
-                        stringResource(R.string.action_play)
-                    },
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White,
-                )
-            }
 
             Spacer(modifier = Modifier.height(28.dp))
         }
@@ -406,6 +396,22 @@ fun NowPlayingScreen(
 }
 
 @Composable
+private fun ShowTime(
+    modifier: Modifier,
+    showTime: () -> String,
+    durationMs: Long
+) {
+    Text(
+        text = "${showTime()} / ${formatDuration(durationMs)}",
+        fontSize = 12.sp,
+        color = TextPrimary,
+        modifier = modifier.padding(top = 8.dp),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+@Composable
 private fun AlbumArtSection(
     imageUrl: String,
     onClick: () -> Unit,
@@ -447,8 +453,8 @@ private fun AlbumArtSection(
 
 @Composable
 private fun AudioWaveform(
-    bars: List<WaveBar>,
-    progress: Float,
+    bars: () -> List<WaveBar>,
+    progress: () -> Float,
     onSeekTo: (Float) -> Unit,
     onScrub: (Float) -> Unit,
     onScrubEnd: () -> Unit,
@@ -458,13 +464,22 @@ private fun AudioWaveform(
     val barWidthPx = with(density) { 4.dp.toPx() }
     val spacingPx = with(density) { 3.dp.toPx() }
 
-    val currentProgress by rememberUpdatedState(progress)
+    val currentProgressProvider by rememberUpdatedState(progress)
+    val barsStateProvider by rememberUpdatedState(bars)
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = currentProgressProvider(),
+        animationSpec = tween(durationMillis = 120, easing = LinearEasing),
+        label = "waveformProgress",
+    )
 
     Canvas(
-        modifier = modifier.pointerInput(bars) {
+        modifier = modifier.pointerInput(Unit) {
+            val barsState = barsStateProvider()
+            val currentProgress = animatedProgress
 
             fun updateSeekPosition(touchX: Float) {
-                val totalBars = bars.size
+                val totalBars = barsState.size
                 if (totalBars == 0) return
                 val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
                 val playheadX = currentProgress.coerceIn(0f, 1f) * totalWidth
@@ -490,11 +505,15 @@ private fun AudioWaveform(
             )
         }
     ) {
-        val totalBars = bars.size
+
+        val barsState = barsStateProvider()
+        val currentProgress = animatedProgress
+
+        val totalBars = barsState.size
         if (totalBars == 0) return@Canvas
         val maxHeightPx = size.height
         val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
-        val clampedProgress = progress.coerceIn(0f, 1f)
+        val clampedProgress = currentProgress.coerceIn(0f, 1f)
         val playheadX = clampedProgress * totalWidth
 
         val centerX = size.width / 2f
@@ -502,7 +521,7 @@ private fun AudioWaveform(
         val desiredOffset = centerX - playheadX
         val offsetX = if (minOffset > 0f) 0f else desiredOffset.coerceIn(minOffset, 0f)
 
-        bars.forEachIndexed { index, bar ->
+        barsState.forEachIndexed { index, bar ->
             val absoluteX = index * (barWidthPx + spacingPx)
             val x = absoluteX + offsetX
             val barH = (bar.height * maxHeightPx * 1.2f).coerceAtMost(maxHeightPx)
@@ -538,7 +557,7 @@ private fun AudioWaveform(
                     // 使用 Brush.linearGradient 实现左绿右灰的硬切分
                     // 通过 stop 相同来实现没有模糊的平滑切割点
                     drawRoundRect(
-                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        brush = Brush.horizontalGradient(
                             0f to AccentGreen,
                             internalProgress to AccentGreen,
                             internalProgress to WaveGray,
@@ -568,16 +587,19 @@ private fun formatDuration(durationMs: Long): String {
     val totalSeconds = (durationMs / 1000f).roundToInt()
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return String.format("%d:%02d", minutes, seconds)
+    return "%d:%02d".format(minutes, seconds)
 }
 
 @Composable
 private fun TransportControls(
-    isPlaying: Boolean,
+    isPlaying: () -> Boolean,
     onSeekPrev: () -> Unit,
     onTogglePlay: () -> Unit,
     onSeekNext: () -> Unit,
 ) {
+
+    val playing = isPlaying()
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
@@ -610,8 +632,8 @@ private fun TransportControls(
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) {
+                    imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (playing) {
                         stringResource(R.string.cd_pause)
                     } else {
                         stringResource(R.string.cd_play)
@@ -687,9 +709,9 @@ private fun EpisodeDetailHalfSheet(
             }
         }
 
-        if (detail.description != null) {
+        if (detail.annotatedDesc != null) {
             Text(
-                text = detail.description.htmlToAnnotatedString(),
+                text = detail.annotatedDesc,
                 fontSize = 14.sp,
                 color = Color(0xFF343434),
                 modifier = Modifier

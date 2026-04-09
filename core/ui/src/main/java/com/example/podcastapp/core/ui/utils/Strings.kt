@@ -11,12 +11,14 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-fun String.htmlToAnnotatedString(): AnnotatedString {
+suspend fun String.htmlToAnnotatedString(): AnnotatedString = withContext(Dispatchers.Default) {
     // 1. 先用系统 API 把 HTML 字符串转为 Spanned (它会自动处理 <p> <br> 等换行逻辑)
-    val spanned = Html.fromHtml(this, Html.FROM_HTML_MODE_COMPACT)
+    val spanned = Html.fromHtml(this@htmlToAnnotatedString, Html.FROM_HTML_MODE_COMPACT)
 
-    return buildAnnotatedString {
+    buildAnnotatedString {
         append(spanned.toString())
 
         // 2. 遍历 Spanned 中的样式区间，映射到 Compose 的 SpanStyle

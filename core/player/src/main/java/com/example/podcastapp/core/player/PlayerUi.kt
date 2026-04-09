@@ -29,7 +29,7 @@ fun MiniPlayer(
     onSeek: (Long) -> Unit,
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.playerState.collectAsState()
     if (state.episodeId == null) return
 
     ShadowCard(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
