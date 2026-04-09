@@ -24,8 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -75,7 +73,8 @@ private val CardBorder = Color(0xFF000000)
 private val AlbumCardBg = Color(0xFFFFFFFF)
 
 // --- Waveform data (normalised 0..1, derived from Figma pixel heights, max=66.3px) ---
-private data class WaveBar(val height: Float)
+@JvmInline
+value class WaveBar(val height: Float)
 
 private val WAVEFORM: List<WaveBar> = listOf(
     WaveBar(0.508f), WaveBar(0.869f), WaveBar(0.738f),
@@ -140,11 +139,12 @@ fun NowPlayingRoute(
         title = state.title.ifBlank { "Take My Breath" },
         artist = state.artist ?: "The Weeknd",
         imageUrl = state.imageUrl ?: ALBUM_COVER,
-        isPlaying = { viewModel.playingState.value },
+        isPlaying = { viewModel.playingState.collectAsState().value },
         durationMs = state.durationMs,
         progress = {
+            val currentProgress = viewModel.progressState.collectAsState().value
             if (state.durationMs > 0) {
-                (viewModel.progressState.value.toFloat() / state.durationMs).coerceIn(0f, 1f)
+                (currentProgress.toFloat() / state.durationMs).coerceIn(0f, 1f)
             } else 0f
         },
         waveformBars = { state.waveformBars },
@@ -173,10 +173,10 @@ fun NowPlayingScreen(
     title: String,
     artist: String,
     imageUrl: String,
-    isPlaying: () -> Boolean,
+    isPlaying: @Composable ()->Boolean,
     durationMs: Long,
-    progress: () -> Float,
-    waveformBars: () -> List<Float>,
+    progress: @Composable () -> Float,
+    waveformBars: ()->List<Float>,
     detail: NowPlayingEpisodeDetail,
     onBack: () -> Unit,
     onOpenDownloads: () -> Unit,
@@ -191,9 +191,11 @@ fun NowPlayingScreen(
 
     // Cache WaveBar list - only recreate when waveformBars actually changes
     val cachedBarsState by rememberUpdatedState(waveformBars)
-    val cachedBars = {
-        val bars = cachedBarsState()
-        if (bars.isNotEmpty()) bars.map { WaveBar(it) } else WAVEFORM
+    val cachedBars by remember {
+        derivedStateOf {
+            val bars = cachedBarsState()
+            if (bars.isNotEmpty()) bars.map { WaveBar(it) } else WAVEFORM
+        }
     }
 
     Box(
@@ -297,7 +299,7 @@ fun NowPlayingScreen(
 
             // Waveform
             AudioWaveform(
-                bars = cachedBars,
+                bars = { cachedBars },
                 progress = progress,
                 onSeekTo = onSeekTo,
                 onScrub = { scrubFraction = it },
@@ -398,7 +400,7 @@ fun NowPlayingScreen(
 @Composable
 private fun ShowTime(
     modifier: Modifier,
-    showTime: () -> String,
+    showTime: @Composable () -> String,
     durationMs: Long
 ) {
     Text(
@@ -454,7 +456,7 @@ private fun AlbumArtSection(
 @Composable
 private fun AudioWaveform(
     bars: () -> List<WaveBar>,
-    progress: () -> Float,
+    progress: @Composable () -> Float,
     onSeekTo: (Float) -> Unit,
     onScrub: (Float) -> Unit,
     onScrubEnd: () -> Unit,
@@ -475,11 +477,13 @@ private fun AudioWaveform(
 
     Canvas(
         modifier = modifier.pointerInput(Unit) {
-            val barsState = barsStateProvider()
-            val currentProgress = animatedProgress
 
-            fun updateSeekPosition(touchX: Float) {
-                val totalBars = barsState.size
+            fun updateSeekPosition(
+                touchX: Float,
+                currentProgress: Float,
+                barProvider: () -> List<WaveBar>
+            ) {
+                val totalBars = barProvider().size
                 if (totalBars == 0) return
                 val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
                 val playheadX = currentProgress.coerceIn(0f, 1f) * totalWidth
@@ -495,10 +499,10 @@ private fun AudioWaveform(
 
             detectDragGestures(
                 onDragStart = { offset ->
-                    updateSeekPosition(offset.x)
+                    updateSeekPosition(offset.x, animatedProgress, barsStateProvider)
                 },
                 onDrag = { change, _ ->
-                    updateSeekPosition(change.position.x)
+                    updateSeekPosition(change.position.x, animatedProgress, barsStateProvider)
                 },
                 onDragEnd = { onScrubEnd() },
                 onDragCancel = { onScrubEnd() },
@@ -592,7 +596,7 @@ private fun formatDuration(durationMs: Long): String {
 
 @Composable
 private fun TransportControls(
-    isPlaying: () -> Boolean,
+    isPlaying: @Composable () -> Boolean,
     onSeekPrev: () -> Unit,
     onTogglePlay: () -> Unit,
     onSeekNext: () -> Unit,
