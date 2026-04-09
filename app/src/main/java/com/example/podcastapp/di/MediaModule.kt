@@ -2,6 +2,8 @@ package com.example.podcastapp.di
 
 import android.content.Context
 import com.example.podcastapp.core.media.PlayerController
+import com.example.podcastapp.core.audioprocessing.WaveformGenerator
+import com.example.podcastapp.core.data.WaveformRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,7 +17,11 @@ object MediaModule {
 
     @Provides
     @Singleton
-    fun providePlayerController(@ApplicationContext context: Context): PlayerController {
-        return PlayerController(context)
+    fun providePlayerController(
+        @ApplicationContext context: Context,
+        waveformRepository: WaveformRepository,
+        waveformGenerator: WaveformGenerator
+    ): PlayerController {
+        return PlayerController(context, waveformRepository, waveformGenerator)
     }
 }

@@ -22,7 +22,7 @@ import com.example.podcastapp.core.database.PodcastDao
 import com.example.podcastapp.core.database.SearchHistoryDao
 import com.example.podcastapp.core.database.SubscriptionDao
 import com.example.podcastapp.core.database.WaveformDao
-import com.example.podcastapp.core.media.WaveformGenerator
+import com.example.podcastapp.core.audioprocessing.WaveformGenerator
 import com.example.podcastapp.core.network.RssFetcher
 import com.example.podcastapp.core.network.RssParser
 import dagger.Module
@@ -56,7 +56,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, "podcast.db")
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
     }
 
@@ -133,6 +133,13 @@ object AppModule {
                 "CREATE INDEX IF NOT EXISTS `index_search_history_updatedAt` " +
                     "ON `search_history` (`updatedAt`)"
             )
+        }
+    }
+
+    private val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // Add author column to episodes table
+            db.execSQL("ALTER TABLE episodes ADD COLUMN `author` TEXT")
         }
     }
 }

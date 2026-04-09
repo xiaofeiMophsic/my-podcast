@@ -1,4 +1,4 @@
-package com.example.podcastapp.core.media
+package com.example.podcastapp.core.audioprocessing
 
 import android.content.Context
 import android.media.MediaMetadataRetriever
@@ -162,7 +162,7 @@ class WaveformGenerator(
         const val DEFAULT_MAX_BARS = -1
         const val BARS_PER_SECOND = 4f
         const val MIN_BARS = 120
-        const val MAX_BARS = 4000
+        const val MAX_BARS = 30000  // 支持最多 ~2 小时 (30000 / 4 = 7500秒 ≈ 125分钟)
         const val FALLBACK_BARS = 256
     }
 }

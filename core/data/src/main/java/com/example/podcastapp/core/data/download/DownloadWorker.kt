@@ -9,7 +9,7 @@ import androidx.work.workDataOf
 import com.example.podcastapp.core.data.DownloadRepository
 import com.example.podcastapp.core.data.WaveformRepository
 import com.example.podcastapp.core.database.DownloadStatus
-import com.example.podcastapp.core.media.WaveformGenerator
+import com.example.podcastapp.core.audioprocessing.WaveformGenerator
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import okhttp3.OkHttpClient
@@ -87,10 +87,14 @@ class DownloadWorker @AssistedInject constructor(
 
     private suspend fun handleSuccess(id: Long, path: String) {
         repository.updateDownloadStatus(id, DownloadStatus.COMPLETED, path)
-        // 直接在 Worker 里生成波形，充分利用后台任务周期
-        val bars = waveformGenerator.generate(File(path).toUri())
-        if (bars.isNotEmpty()) {
-            waveformRepository.saveWaveform(id, bars)
+        // 检查是否已经有波形缓存了（播放可能已经生成过）
+        val existing = waveformRepository.getWaveform(id)
+        if (existing == null) {
+            // 没有缓存才生成，避免重复工作
+            val bars = waveformGenerator.generate(File(path).toUri())
+            if (bars.isNotEmpty()) {
+                waveformRepository.saveWaveform(id, bars)
+            }
         }
     }
 

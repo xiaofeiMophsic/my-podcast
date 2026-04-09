@@ -36,7 +36,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.rememberUpdatedState
@@ -139,6 +143,7 @@ fun NowPlayingRoute(
         title = state.title.ifBlank { "Take My Breath" },
         artist = state.artist ?: "The Weeknd",
         imageUrl = state.imageUrl ?: ALBUM_COVER,
+        isGeneratingWaveform = state.isGeneratingWaveform,
         isPlaying = { viewModel.playingState.collectAsState().value },
         durationMs = state.durationMs,
         progress = {
@@ -173,6 +178,7 @@ fun NowPlayingScreen(
     title: String,
     artist: String,
     imageUrl: String,
+    isGeneratingWaveform: Boolean,
     isPlaying: @Composable ()->Boolean,
     durationMs: Long,
     progress: @Composable () -> Float,
@@ -297,26 +303,37 @@ fun NowPlayingScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Waveform
-            AudioWaveform(
-                bars = { cachedBars },
-                progress = progress,
-                onSeekTo = onSeekTo,
-                onScrub = { scrubFraction = it },
-                onScrubEnd = { scrubFraction = null },
-                modifier = Modifier
+            // Waveform - show loading animation when generating
+            if (isGeneratingWaveform) {
+                WaveformLoading(modifier = Modifier
                     .fillMaxWidth()
-                    .height(70.dp),
-            )
+                    .height(70.dp)
+                )
+            } else {
+                AudioWaveform(
+                    bars = { cachedBars },
+                    progress = progress,
+                    onSeekTo = onSeekTo,
+                    onScrub = { scrubFraction = it },
+                    onScrubEnd = { scrubFraction = null },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(70.dp),
+                )
+            }
 
-            if (scrubFraction != null) {
-                ShowTime(
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    showTime = {
-                        val showFraction = scrubFraction ?: progress()
-                        formatTimeFromFraction(showFraction, durationMs)
-                    },
-                    durationMs = durationMs,
+            if (scrubFraction != null && !isGeneratingWaveform) {
+                val showFraction = scrubFraction ?: progress()
+                val showTime = formatTimeFromFraction(showFraction, durationMs)
+                Text(
+                    text = "${showTime} / ${formatDuration(durationMs)}",
+                    fontSize = 12.sp,
+                    color = TextPrimary,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .align(Alignment.CenterHorizontally),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
@@ -467,7 +484,8 @@ private fun AudioWaveform(
     val spacingPx = with(density) { 3.dp.toPx() }
 
     val currentProgressProvider by rememberUpdatedState(progress)
-    val barsStateProvider by rememberUpdatedState(bars)
+
+    val barList = remember { bars() }
 
     val animatedProgress by animateFloatAsState(
         targetValue = currentProgressProvider(),
@@ -481,9 +499,8 @@ private fun AudioWaveform(
             fun updateSeekPosition(
                 touchX: Float,
                 currentProgress: Float,
-                barProvider: () -> List<WaveBar>
             ) {
-                val totalBars = barProvider().size
+                val totalBars = barList.size
                 if (totalBars == 0) return
                 val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
                 val playheadX = currentProgress.coerceIn(0f, 1f) * totalWidth
@@ -499,10 +516,10 @@ private fun AudioWaveform(
 
             detectDragGestures(
                 onDragStart = { offset ->
-                    updateSeekPosition(offset.x, animatedProgress, barsStateProvider)
+                    updateSeekPosition(offset.x, animatedProgress)
                 },
                 onDrag = { change, _ ->
-                    updateSeekPosition(change.position.x, animatedProgress, barsStateProvider)
+                    updateSeekPosition(change.position.x, animatedProgress)
                 },
                 onDragEnd = { onScrubEnd() },
                 onDragCancel = { onScrubEnd() },
@@ -510,10 +527,9 @@ private fun AudioWaveform(
         }
     ) {
 
-        val barsState = barsStateProvider()
         val currentProgress = animatedProgress
 
-        val totalBars = barsState.size
+        val totalBars = barList.size
         if (totalBars == 0) return@Canvas
         val maxHeightPx = size.height
         val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
@@ -525,7 +541,7 @@ private fun AudioWaveform(
         val desiredOffset = centerX - playheadX
         val offsetX = if (minOffset > 0f) 0f else desiredOffset.coerceIn(minOffset, 0f)
 
-        barsState.forEachIndexed { index, bar ->
+        barList.forEachIndexed { index, bar ->
             val absoluteX = index * (barWidthPx + spacingPx)
             val x = absoluteX + offsetX
             val barH = (bar.height * maxHeightPx * 1.2f).coerceAtMost(maxHeightPx)
@@ -736,3 +752,39 @@ private fun EpisodeDetailHalfSheet(
         }
     }
 }
+
+@Composable
+private fun WaveformLoading(
+    modifier: Modifier = Modifier,
+) {
+    val infiniteTransition = rememberInfiniteTransition()
+    val shimmerAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "shimmer"
+    )
+
+    val barCount = 50
+    Canvas(modifier = modifier) {
+        val barWidthPx = 4.dp.toPx()
+        val spacingPx = 3.dp.toPx()
+        val maxHeight = size.height
+
+        for (i in 0 until barCount) {
+            val x = i * (barWidthPx + spacingPx)
+            val randomHeight = (0.3f + (i % 3) * 0.2f) * maxHeight
+            val y = (maxHeight - randomHeight) / 2f
+
+            drawRoundRect(
+                color = WaveGray.copy(alpha = shimmerAlpha),
+                topLeft = Offset(x, y),
+                size = Size(barWidthPx, randomHeight),
+                cornerRadius = CornerRadius(barWidthPx / 2f)
+            )
+        }
+    }
+}
+

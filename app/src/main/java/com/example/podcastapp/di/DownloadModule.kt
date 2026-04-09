@@ -6,7 +6,6 @@ import androidx.work.WorkManager
 import com.example.podcastapp.core.data.DownloadRepository
 import com.example.podcastapp.core.data.WaveformRepository
 import com.example.podcastapp.core.data.download.DownloadController2
-import com.example.podcastapp.core.media.WaveformGenerator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

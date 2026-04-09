@@ -13,7 +13,7 @@ import androidx.room.TypeConverters
         EpisodeWaveformEntity::class,
         SearchHistoryEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

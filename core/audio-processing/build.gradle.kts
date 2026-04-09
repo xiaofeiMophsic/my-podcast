@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.podcastapp.core.data"
+    namespace = "com.example.podcastapp.core.audioprocessing"
     compileSdk = 36
 
     defaultConfig {
@@ -16,14 +16,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:network"))
-    implementation(project(":core:database"))
-    api(project(":core:audio-processing"))
+    implementation(libs.amplituda)
 
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.paging.runtime)
     implementation(libs.androidx.core.ktx)
-
-    implementation(libs.hilt.work)
-    implementation(libs.work.runtime.ktx)
 }

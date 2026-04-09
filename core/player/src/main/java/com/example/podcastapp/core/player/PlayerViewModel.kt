@@ -41,7 +41,8 @@ class PlayerViewModel @Inject constructor(
             imageUrl = it.imageUrl,
             durationMs = it.durationMs,
             episodeId = it.episodeId,
-            waveformBars = it.waveformBars
+            waveformBars = it.waveformBars,
+            isGeneratingWaveform = it.isGeneratingWaveform
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MetadataState())
 
@@ -62,6 +63,7 @@ class PlayerViewModel @Inject constructor(
                 episodeId = episode.id,
                 title = episode.title,
                 url = playUrl,
+                artist = episode.author,
                 imageUrl = episode.imageUrl,
             )
             refreshEpisodeDetail(episode.id)

@@ -96,8 +96,10 @@ class EpisodeRepositoryImpl(
                 description = item.description,
                 audioUrl = item.audioUrl,
                 imageUrl = item.imageUrl ?: podcast.imageUrl,
+                author = podcast.author,
                 durationSeconds = item.durationSeconds,
                 pubDate = item.pubDate,
+                isPlayed = false,
                 updatedAt = now,
             )
         }
@@ -141,9 +143,11 @@ class WaveformRepositoryImpl(
     override suspend fun getWaveform(episodeId: Long): List<Float>? {
         val entity = waveformDao.getByEpisodeId(episodeId) ?: return null
         if (entity.barsCsv.isBlank()) return null
-        return entity.barsCsv.split(",")
+        val bars = entity.barsCsv.split(",")
             .mapNotNull { it.toFloatOrNull() }
             .map { it.coerceIn(0f, 1f) }
+        // 如果解析出来是空的，返回null让它重新生成
+        return if (bars.isEmpty()) null else bars
     }
 
     override suspend fun saveWaveform(episodeId: Long, bars: List<Float>) {

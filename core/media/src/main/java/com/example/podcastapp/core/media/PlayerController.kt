@@ -8,6 +8,8 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.example.podcastapp.core.audioprocessing.WaveformGenerator
+import com.example.podcastapp.core.data.WaveformRepository
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +20,8 @@ import javax.inject.Singleton
 @Singleton
 class PlayerController @Inject constructor(
     private val context: Context,
-    private val waveformGenerator: WaveformGenerator = WaveformGenerator(context)
+    private val waveformRepository: WaveformRepository,
+    private val waveformGenerator: WaveformGenerator
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -108,6 +111,17 @@ class PlayerController @Inject constructor(
     ) {
         val controller = browser ?: return
 
+        // 如果当前正在播放同一个 episode，不需要重新加载，只需要确保播放
+        if (_state.value.episodeId == episodeId && controller.isPlaying) {
+            // 已经在播放同一个，直接返回
+            return
+        }
+        if (_state.value.episodeId == episodeId && !controller.isPlaying) {
+            // 同一个但是暂停了，直接继续播放
+            controller.play()
+            return
+        }
+
         val mediaMetadata = MediaMetadata.Builder()
             .setTitle(title)
             .setArtist(artist)
@@ -125,11 +139,30 @@ class PlayerController @Inject constructor(
         controller.prepare()
         controller.play()
 
-        // 波形生成逻辑（异步）
+        // 波形生成逻辑（异步，先查缓存）
         scope.launch(Dispatchers.IO) {
-            val bars = waveformGenerator.generate(url.toUri())
+            // 先检查数据库缓存
+            val cached = waveformRepository.getWaveform(episodeId)
+            val bars = if (cached != null) {
+                // 从缓存读取
+                cached
+            } else {
+                // 没有缓存，重新生成
+                updateState(isGeneratingWaveform = true)
+                val generated = waveformGenerator.generate(url.toUri())
+                // 保存到数据库
+                waveformRepository.saveWaveform(episodeId, generated)
+                generated
+            }
             withContext(Dispatchers.Main) {
-                updateState(waveformBars = bars, title = title, artist = artist, imageUrl = imageUrl, episodeId = episodeId)
+                updateState(
+                    waveformBars = bars,
+                    isGeneratingWaveform = false,
+                    title = title,
+                    artist = artist,
+                    imageUrl = imageUrl,
+                    episodeId = episodeId
+                )
             }
         }
     }
@@ -147,6 +180,7 @@ class PlayerController @Inject constructor(
         durationMs: Long? = null,
         episodeId: Long? = null,
         waveformBars: List<Float>? = null,
+        isGeneratingWaveform: Boolean? = null,
     ) {
         val current = _state.value
         _state.value = current.copy(
@@ -158,6 +192,7 @@ class PlayerController @Inject constructor(
             durationMs = durationMs ?: current.durationMs,
             episodeId = episodeId ?: current.episodeId,
             waveformBars = waveformBars ?: current.waveformBars,
+            isGeneratingWaveform = isGeneratingWaveform ?: current.isGeneratingWaveform,
         )
     }
 }

@@ -37,6 +37,7 @@ data class EpisodeEntity(
     val description: String?,
     val audioUrl: String,
     val imageUrl: String?,
+    val author: String?,
     val durationSeconds: Long?,
     val pubDate: Long?,
     val isPlayed: Boolean = false,
