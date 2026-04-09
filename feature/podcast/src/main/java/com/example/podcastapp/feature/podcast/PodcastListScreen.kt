@@ -3,6 +3,7 @@ package com.example.podcastapp.feature.podcast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,10 +12,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,11 +28,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.podcastapp.feature.podcast.R
 import com.example.podcastapp.core.ui.neo.NeoColors
 import com.example.podcastapp.core.ui.neo.NeoOutlineButton
 import com.example.podcastapp.core.ui.neo.NeoPrimaryButton
@@ -64,6 +68,7 @@ fun PodcastListScreen(
     onDownloadsClick: () -> Unit,
 ) {
     var feedUrl by remember { mutableStateOf("") }
+    var showMenu by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().padding(bottom = 8.dp).background(NeoColors.ScreenBg)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -74,8 +79,14 @@ fun PodcastListScreen(
                         IconButton(onClick = onSearchClick) {
                             Icon(Icons.Default.Search, contentDescription = "Search", tint = NeoColors.TextPrimary)
                         }
-                        IconButton(onClick = onDownloadsClick) {
-                            Icon(Icons.Default.Download, contentDescription = "Downloads", tint = NeoColors.TextPrimary)
+                        Box {
+                            IconButton(onClick = { showMenu = !showMenu }) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "More actions",
+                                    tint = NeoColors.TextPrimary
+                                )
+                            }
                         }
                     }
                 },
@@ -158,6 +169,35 @@ fun PodcastListScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+
+        if (showMenu) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { showMenu = false },
+            )
+            Box(
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.TopEnd)
+                    .padding(top = 86.dp, end = 16.dp)
+                    .widthIn(min = 170.dp, max = 210.dp),
+            ) {
+                ShadowCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.download_management),
+                        fontSize = 14.sp,
+                        color = NeoColors.TextPrimary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showMenu = false
+                                onDownloadsClick()
+                            }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                    )
                 }
             }
         }

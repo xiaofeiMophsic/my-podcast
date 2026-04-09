@@ -3,12 +3,12 @@ package com.example.podcastapp.feature.episode
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.podcastapp.core.data.DownloadController
 import com.example.podcastapp.core.data.DownloadRepository
-import com.example.podcastapp.core.database.DownloadStatus
 import com.example.podcastapp.core.data.EpisodeRepository
 import com.example.podcastapp.core.data.WaveformRepository
+import com.example.podcastapp.core.data.download.DownloadController2
 import com.example.podcastapp.core.database.DownloadEntity
+import com.example.podcastapp.core.database.DownloadStatus
 import com.example.podcastapp.core.media.PlayerController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +24,7 @@ import javax.inject.Inject
 class EpisodeDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val episodeRepository: EpisodeRepository,
-    private val downloadController: DownloadController,
+    private val downloadController: DownloadController2,
     private val downloadRepository: DownloadRepository,
     private val playerController: PlayerController,
     private val waveformRepository: WaveformRepository,
@@ -117,6 +117,12 @@ class EpisodeDetailViewModel @Inject constructor(
     fun skipBackward() {
         val current = playerController.state.value.positionMs
         playerController.seekTo((current - 10000).coerceAtLeast(0))
+    }
+
+    fun cancelDownload() {
+        viewModelScope.launch {
+            downloadController.cancel(episodeId)
+        }
     }
 }
 

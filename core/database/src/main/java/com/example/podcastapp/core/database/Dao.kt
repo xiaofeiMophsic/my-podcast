@@ -54,6 +54,9 @@ interface SubscriptionDao {
     @Query("SELECT * FROM subscriptions")
     fun observeSubscriptions(): Flow<List<SubscriptionEntity>>
 
+    @Query("SELECT podcastId FROM subscriptions")
+    suspend fun getSubscribedPodcastIds(): List<Long>
+
     @Upsert
     suspend fun upsert(item: SubscriptionEntity)
 
@@ -77,6 +80,31 @@ interface DownloadDao {
 
     @Update
     suspend fun update(item: DownloadEntity)
+
+    @Query("""
+        UPDATE downloads 
+        SET downloadedBytes = :downloaded, 
+            totalBytes = :total, 
+            status = :status,
+            updatedAt = :timestamp
+        WHERE episodeId = :id
+    """)
+    suspend fun updateProgress(
+        id: Long,
+        downloaded: Long,
+        total: Long,
+        status: DownloadStatus,
+        timestamp: Long = System.currentTimeMillis()
+    )
+
+    // 更新最终状态（如完成、失败）
+    @Query("UPDATE downloads SET status = :status, localPath = :path, updatedAt = :timestamp WHERE episodeId = :id")
+    suspend fun updateStatus(
+        id: Long,
+        status: DownloadStatus,
+        path: String?,
+        timestamp: Long = System.currentTimeMillis()
+    )
 }
 
 @Dao

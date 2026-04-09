@@ -2,6 +2,7 @@ package com.example.podcastapp.core.data
 
 import com.example.podcastapp.core.database.DownloadDao
 import com.example.podcastapp.core.database.DownloadEntity
+import com.example.podcastapp.core.database.DownloadStatus
 import com.example.podcastapp.core.database.EpisodeWaveformEntity
 import com.example.podcastapp.core.database.EpisodeDao
 import com.example.podcastapp.core.database.EpisodeEntity
@@ -14,6 +15,7 @@ import com.example.podcastapp.core.database.SearchHistoryDao
 import com.example.podcastapp.core.database.SearchHistoryEntity
 import com.example.podcastapp.core.network.RssFetcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 class PodcastRepositoryImpl(
@@ -25,6 +27,8 @@ class PodcastRepositoryImpl(
     override fun observePodcasts(): Flow<List<PodcastEntity>> = podcastDao.observePodcasts()
 
     override fun observeSubscriptions(): Flow<List<SubscriptionEntity>> = subscriptionDao.observeSubscriptions()
+
+    override suspend fun getSubscribedPodcastIds(): List<Long> = subscriptionDao.getSubscribedPodcastIds()
 
     override suspend fun refreshPodcast(feedUrl: String): PodcastEntity {
         val now = System.currentTimeMillis()
@@ -108,7 +112,7 @@ class DownloadRepositoryImpl(
     private val downloadDao: DownloadDao,
 ) : DownloadRepository {
 
-    override fun observeDownloads() = downloadDao.observeDownloads()
+    override fun observeDownloads() = downloadDao.observeDownloads().distinctUntilChanged()
 
     override suspend fun getByEpisode(episodeId: Long) = downloadDao.getByEpisode(episodeId)
 
@@ -117,6 +121,16 @@ class DownloadRepositoryImpl(
 
     override suspend fun upsert(download: DownloadEntity) {
         downloadDao.upsert(download)
+    }
+
+    // 供 Worker 在循环中调用
+    override suspend fun updateDownloadProgress(id: Long, downloaded: Long, total: Long, status: DownloadStatus) {
+        downloadDao.updateProgress(id, downloaded, total, status)
+    }
+
+    // 供 Worker 在任务结束时调用
+    override suspend fun updateDownloadStatus(id: Long, status: DownloadStatus, path: String?) {
+        downloadDao.updateStatus(id, status, path)
     }
 }
 

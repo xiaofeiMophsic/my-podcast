@@ -59,8 +59,23 @@ private fun AppRoot() {
                 onAddRssClick = { navController.navigate(NavRoutes.ADD_RSS) },
             )
         }
-        composable(NavRoutes.NOW_PLAYING) {
-            NowPlayingRoute(onBack = { navController.popBackStack() })
+        composable(
+            route = "${NavRoutes.NOW_PLAYING}?${NavRoutes.ARG_TARGET_EPISODE_ID}={${NavRoutes.ARG_TARGET_EPISODE_ID}}",
+            arguments = listOf(
+                navArgument(NavRoutes.ARG_TARGET_EPISODE_ID) {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            ),
+        ) { backStackEntry ->
+            val targetEpisodeId = backStackEntry.arguments
+                ?.getLong(NavRoutes.ARG_TARGET_EPISODE_ID)
+                ?.takeIf { it > 0L }
+            NowPlayingRoute(
+                onBack = { navController.popBackStack() },
+                targetEpisodeId = targetEpisodeId,
+                onOpenDownloads = { navController.navigate(NavRoutes.DOWNLOADS) },
+            )
         }
         composable(NavRoutes.PODCAST_LIST) {
             PodcastListRoute(
@@ -74,7 +89,7 @@ private fun AppRoot() {
         composable(NavRoutes.SEARCH) {
             SearchRoute(
                 onEpisodeClick = { episodeId ->
-                    navController.navigate(NavRoutes.episodeDetailRoute(episodeId))
+                    navController.navigate(NavRoutes.nowPlayingRoute(episodeId))
                 },
                 onBack = { navController.popBackStack() },
             )

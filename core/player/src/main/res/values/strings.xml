@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="download_management">Download Management</string>
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="cd_back_10s">Back 10 seconds</string>
+    <string name="cd_forward_30s">Forward 30 seconds</string>
+    <string name="cd_play">Play</string>
+    <string name="cd_pause">Pause</string>
+    <string name="episode_details">Episode details</string>
+    <string name="published_format">Published %1$s</string>
+    <string name="no_details_available">No details available</string>
+</resources>

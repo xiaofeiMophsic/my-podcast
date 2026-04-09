@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="download_management">下载管理</string>
+    <string name="action_play">播放</string>
+    <string name="action_pause">暂停</string>
+    <string name="cd_back_10s">快退10秒</string>
+    <string name="cd_forward_30s">快进30秒</string>
+    <string name="cd_play">播放</string>
+    <string name="cd_pause">暂停</string>
+    <string name="episode_details">音频详情</string>
+    <string name="published_format">发布时间 %1$s</string>
+    <string name="no_details_available">暂无详情</string>
+</resources>

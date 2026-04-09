@@ -2,6 +2,7 @@ package com.example.podcastapp.core.player
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -12,26 +13,35 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.material.icons.Icons
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +53,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +61,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.podcastapp.feature.player.R
+import com.example.podcastapp.core.ui.neo.ShadowCard
+import com.example.podcastapp.core.ui.utils.htmlToAnnotatedString
 import kotlin.math.roundToInt
 
 // --- Design tokens ---
@@ -58,7 +72,6 @@ private val AccentGreen     = Color(0xFF87B800)
 private val WaveGray        = Color(0xFFC4C4C4)
 private val TextPrimary     = Color(0xFF000000)
 private val CardBorder      = Color(0xFF000000)
-private val ShadowColor     = Color(0x40000000)
 private val AlbumCardBg     = Color(0xFFFFFFFF)
 
 // --- Waveform data (normalised 0..1, derived from Figma pixel heights, max=66.3px) ---
@@ -100,9 +113,20 @@ private const val IC_MORE      = "https://www.figma.com/api/mcp/asset/94acd51b-3
 @Composable
 fun NowPlayingRoute(
     onBack: () -> Unit,
+    targetEpisodeId: Long? = null,
+    onOpenDownloads: () -> Unit = {},
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val detail by viewModel.episodeDetail.collectAsState()
+
+    LaunchedEffect(targetEpisodeId) {
+        targetEpisodeId?.let { viewModel.playEpisodeById(it) }
+    }
+    LaunchedEffect(state.episodeId) {
+        viewModel.refreshEpisodeDetail(state.episodeId)
+    }
+
     val progress by remember {
         derivedStateOf {
             if (state.durationMs > 0) {
@@ -125,10 +149,12 @@ fun NowPlayingRoute(
         durationMs = state.durationMs,
         progress  = animatedProgress,
         waveformBars = state.waveformBars,
+        detail = detail,
         onBack          = onBack,
+        onOpenDownloads = onOpenDownloads,
         onTogglePlay    = { viewModel.togglePlayPause(state.isPlaying) },
-        onSeekPrev      = { viewModel.seekTo(maxOf(0, state.positionMs - 15_000)) },
-        onSeekNext      = { viewModel.seekTo(minOf(state.durationMs, state.positionMs + 15_000)) },
+        onSeekPrev      = { viewModel.seekTo(maxOf(0, state.positionMs - 10_000)) },
+        onSeekNext      = { viewModel.seekTo(minOf(state.durationMs, state.positionMs + 30_000)) },
         onSeekTo        = { fraction ->
             val target = (state.durationMs * fraction).toLong().coerceAtLeast(0L)
             viewModel.seekTo(target)
@@ -145,13 +171,17 @@ fun NowPlayingScreen(
     durationMs: Long,
     progress: Float,
     waveformBars: List<Float>,
+    detail: NowPlayingEpisodeDetail,
     onBack: () -> Unit,
+    onOpenDownloads: () -> Unit,
     onTogglePlay: () -> Unit,
     onSeekPrev: () -> Unit,
     onSeekNext: () -> Unit,
     onSeekTo: (Float) -> Unit,
 ) {
     var scrubFraction by remember { mutableStateOf<Float?>(null) }
+    var showDetailSheet by remember { mutableStateOf(false) }
+    var showTopMenu by remember { mutableStateOf(false) }
     val showFraction = scrubFraction ?: progress
     val showTime = formatTimeFromFraction(showFraction, durationMs)
 
@@ -163,7 +193,8 @@ fun NowPlayingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 25.dp),
+                .padding(horizontal = 25.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.height(58.dp))
@@ -197,20 +228,33 @@ fun NowPlayingScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.align(Alignment.Center),
                 )
-                // Heart icon
-                AsyncImage(
-                    model = IC_HEART,
-                    contentDescription = "Favourite",
-                    modifier = Modifier
-                        .size(37.dp)
-                        .align(Alignment.CenterEnd),
-                )
+                Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                    Surface(
+                        onClick = { showTopMenu = !showTopMenu },
+                        modifier = Modifier.size(37.dp),
+                        shape = CircleShape,
+                        color = Color.Black,
+                        border = BorderStroke(0.75.dp, Color(0xFFD9D9D9)),
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Text(
+                                text = "⋮",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(28.dp))
 
             // Album art with tilted shadow card
-            AlbumArtSection(imageUrl = imageUrl)
+            AlbumArtSection(
+                imageUrl = imageUrl,
+                onClick = { showDetailSheet = true },
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -264,35 +308,38 @@ fun NowPlayingScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Playback controls
-            PlaybackControls(
+            TransportControls(
                 isPlaying = isPlaying,
-                onRepeat   = {},
-                onPrev     = onSeekPrev,
-                onPlay     = onTogglePlay,
-                onNext     = onSeekNext,
-                onMore     = {},
+                onSeekPrev = onSeekPrev,
+                onTogglePlay = onTogglePlay,
+                onSeekNext = onSeekNext,
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // View Lyrics button
             Button(
-                onClick = {},
+                onClick = onTogglePlay,
                 modifier = Modifier
-                    .width(234.dp)
+                    .fillMaxWidth()
+                    .widthIn(max = 260.dp)
                     .height(52.dp),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentGreen),
                 border = BorderStroke(1.dp, Color.White),
             ) {
                 Text(
-                    text = "View Lyrics",
+                    text = if (isPlaying) {
+                        stringResource(R.string.action_pause)
+                    } else {
+                        stringResource(R.string.action_play)
+                    },
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color.White,
                 )
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
         }
 
         // Decorative dots (top-right area)
@@ -304,11 +351,65 @@ fun NowPlayingScreen(
                 .align(Alignment.TopEnd)
                 .offset(x = (-17).dp, y = 110.dp),
         )
+
+        if (showTopMenu) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { showTopMenu = false },
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 106.dp, end = 20.dp)
+                    .widthIn(min = 150.dp, max = 190.dp),
+            ) {
+                ShadowCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.download_management),
+                        fontSize = 14.sp,
+                        color = TextPrimary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showTopMenu = false
+                                onOpenDownloads()
+                            }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                    )
+                }
+            }
+        }
+
+        if (showDetailSheet) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.25f))
+                    .clickable { showDetailSheet = false },
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            ) {
+                ShadowCard(modifier = Modifier.fillMaxWidth()) {
+                    EpisodeDetailHalfSheet(
+                        detail = detail,
+                        fallbackCover = imageUrl,
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun AlbumArtSection(imageUrl: String) {
+private fun AlbumArtSection(
+    imageUrl: String,
+    onClick: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -328,7 +429,8 @@ private fun AlbumArtSection(imageUrl: String) {
         Surface(
             modifier = Modifier
                 .size(width = 316.dp, height = 310.dp)
-                .offset(x = 4.dp, y = 14.dp),
+                .offset(x = 4.dp, y = 14.dp)
+                .clickable(onClick = onClick),
             shape = RoundedCornerShape(24.dp),
             border = BorderStroke(1.dp, CardBorder),
             color = AlbumCardBg,
@@ -356,36 +458,32 @@ private fun AudioWaveform(
     val barWidthPx = with(density) { 4.dp.toPx() }
     val spacingPx = with(density) { 3.dp.toPx() }
 
+    val currentProgress by rememberUpdatedState(progress)
+
     Canvas(
-        modifier = modifier.pointerInput(bars, progress) {
+        modifier = modifier.pointerInput(bars) {
+
+            fun updateSeekPosition(touchX: Float) {
+                val totalBars = bars.size
+                if (totalBars == 0) return
+                val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
+                val playheadX = currentProgress.coerceIn(0f, 1f) * totalWidth
+                val centerX = size.width / 2f
+                val minOffset = size.width - totalWidth
+                val desiredOffset = centerX - playheadX
+                val offsetX = if (minOffset > 0f) 0f else desiredOffset.coerceIn(minOffset, 0f)
+                val positionX = (touchX - offsetX).coerceIn(0f, totalWidth)
+                val fraction = (positionX / totalWidth).coerceIn(0f, 1f)
+                onSeekTo(fraction)
+                onScrub(fraction)
+            }
+
             detectDragGestures(
                 onDragStart = { offset ->
-                    val totalBars = bars.size
-                    if (totalBars == 0) return@detectDragGestures
-                    val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
-                    val playheadX = progress.coerceIn(0f, 1f) * totalWidth
-                    val centerX = size.width / 2f
-                    val minOffset = size.width - totalWidth
-                    val desiredOffset = centerX - playheadX
-                    val offsetX = if (minOffset > 0f) 0f else desiredOffset.coerceIn(minOffset, 0f)
-                    val positionX = (offset.x - offsetX).coerceIn(0f, totalWidth)
-                    val fraction = (positionX / totalWidth).coerceIn(0f, 1f)
-                    onSeekTo(fraction)
-                    onScrub(fraction)
+                    updateSeekPosition(offset.x)
                 },
                 onDrag = { change, _ ->
-                    val totalBars = bars.size
-                    if (totalBars == 0) return@detectDragGestures
-                    val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
-                    val playheadX = progress.coerceIn(0f, 1f) * totalWidth
-                    val centerX = size.width / 2f
-                    val minOffset = size.width - totalWidth
-                    val desiredOffset = centerX - playheadX
-                    val offsetX = if (minOffset > 0f) 0f else desiredOffset.coerceIn(minOffset, 0f)
-                    val positionX = (change.position.x - offsetX).coerceIn(0f, totalWidth)
-                    val fraction = (positionX / totalWidth).coerceIn(0f, 1f)
-                    onSeekTo(fraction)
-                    onScrub(fraction)
+                    updateSeekPosition(change.position.x)
                 },
                 onDragEnd = { onScrubEnd() },
                 onDragCancel = { onScrubEnd() },
@@ -474,57 +572,141 @@ private fun formatDuration(durationMs: Long): String {
 }
 
 @Composable
-private fun PlaybackControls(
+private fun TransportControls(
     isPlaying: Boolean,
-    onRepeat: () -> Unit,
-    onPrev: () -> Unit,
-    onPlay: () -> Unit,
-    onNext: () -> Unit,
-    onMore: () -> Unit,
+    onSeekPrev: () -> Unit,
+    onTogglePlay: () -> Unit,
+    onSeekNext: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = IC_REPEAT,
-            contentDescription = "Repeat",
-            modifier = Modifier.size(29.dp),
-        )
-        // Prev = next icon rotated 180°
-        AsyncImage(
-            model = IC_PREV,
-            contentDescription = "Previous",
-            modifier = Modifier
-                .size(37.dp)
-                .rotate(180f),
-        )
-        // Play/Pause button
         Surface(
-            onClick = onPlay,
+            onClick = onSeekPrev,
+            modifier = Modifier.size(52.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorder),
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                AsyncImage(
+                    model = IC_PREV,
+                    contentDescription = stringResource(R.string.cd_back_10s),
+                    modifier = Modifier
+                        .size(24.dp)
+                        .rotate(180f),
+                )
+            }
+        }
+
+        Surface(
+            onClick = onTogglePlay,
             modifier = Modifier.size(66.dp),
             shape = RoundedCornerShape(16.dp),
             color = Color.White,
             border = BorderStroke(1.dp, CardBorder),
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                AsyncImage(
-                    model = IC_PLAY,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) {
+                        stringResource(R.string.cd_pause)
+                    } else {
+                        stringResource(R.string.cd_play)
+                    },
+                    tint = TextPrimary,
                     modifier = Modifier.size(36.dp),
                 )
             }
         }
-        AsyncImage(
-            model = IC_NEXT,
-            contentDescription = "Next",
-            modifier = Modifier.size(37.dp),
-        )
-        AsyncImage(
-            model = IC_MORE,
-            contentDescription = "More",
-            modifier = Modifier.size(32.dp),
-        )
+
+        Surface(
+            onClick = onSeekNext,
+            modifier = Modifier.size(52.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorder),
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                AsyncImage(
+                    model = IC_NEXT,
+                    contentDescription = stringResource(R.string.cd_forward_30s),
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeDetailHalfSheet(
+    detail: NowPlayingEpisodeDetail,
+    fallbackCover: String,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 320.dp, max = 520.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            AsyncImage(
+                model = detail.imageUrl ?: fallbackCover,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = detail.title.ifBlank { stringResource(R.string.episode_details) },
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                detail.pubDate?.let {
+                    Text(
+                        text = stringResource(R.string.published_format, it),
+                        fontSize = 12.sp,
+                        color = Color(0xFF6B6B6B),
+                    )
+                }
+            }
+        }
+
+        if (detail.description != null) {
+            Text(
+                text = detail.description.htmlToAnnotatedString(),
+                fontSize = 14.sp,
+                color = Color(0xFF343434),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.no_details_available),
+                fontSize = 14.sp,
+                color = Color(0xFF343434),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+            )
+        }
     }
 }

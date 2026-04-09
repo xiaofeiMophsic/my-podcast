@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="download_management_title">下载管理</string>
+    <string name="no_downloads_yet">暂无下载记录</string>
+    <string name="in_progress">正在下载</string>
+    <string name="history">历史下载</string>
+</resources>

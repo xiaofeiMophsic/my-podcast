@@ -8,6 +8,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,17 +17,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Forward30
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay10
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +46,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.podcastapp.core.database.DownloadStatus
-import com.example.podcastapp.core.media.PlayerState
 import com.example.podcastapp.core.ui.neo.NeoColors
 import com.example.podcastapp.core.ui.neo.NeoOutlineButton
 import com.example.podcastapp.core.ui.neo.NeoPrimaryButton
@@ -65,15 +60,10 @@ fun EpisodeDetailRoute(
     viewModel: EpisodeDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    val playerState by viewModel.playerState.collectAsState()
 
     EpisodeDetailScreen(
         state = state,
-        playerState = playerState,
         onBack = onBack,
-        onTogglePlay = viewModel::togglePlay,
-        onSeekForward = viewModel::skipForward,
-        onSeekBackward = viewModel::skipBackward,
         onDownload = viewModel::download,
     )
 }
@@ -81,11 +71,7 @@ fun EpisodeDetailRoute(
 @Composable
 fun EpisodeDetailScreen(
     state: EpisodeDetailUiState,
-    playerState: PlayerState,
     onBack: () -> Unit,
-    onTogglePlay: () -> Unit,
-    onSeekForward: () -> Unit,
-    onSeekBackward: () -> Unit,
     onDownload: () -> Unit,
 ) {
     Box(
@@ -139,8 +125,10 @@ fun EpisodeDetailScreen(
                                 text = it.htmlToAnnotatedString(),
                                 fontSize = 13.sp,
                                 color = NeoColors.TextSecondary,
-                                maxLines = 6,
-                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 260.dp)
+                                    .verticalScroll(rememberScrollState()),
                             )
                         }
                     }
@@ -157,25 +145,6 @@ fun EpisodeDetailScreen(
                             .padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            IconButton(onClick = onSeekBackward) {
-                                Icon(Icons.Default.Replay10, contentDescription = "Back 10s")
-                            }
-                            IconButton(onClick = onTogglePlay) {
-                                Icon(
-                                    imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    contentDescription = "Play/Pause",
-                                )
-                            }
-                            IconButton(onClick = onSeekForward) {
-                                Icon(Icons.Default.Forward30, contentDescription = "Forward 30s")
-                            }
-                        }
-
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             when (state.downloadStatus) {
                                 DownloadStatus.COMPLETED -> {
@@ -317,4 +286,3 @@ private fun DownloadProgressButton(
         }
     }
 }
-

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.work.WorkManager
 import com.example.podcastapp.core.data.DownloadRepository
 import com.example.podcastapp.core.data.DownloadRepositoryImpl
 import com.example.podcastapp.core.data.EpisodeRepository
@@ -105,6 +106,12 @@ object AppModule {
     fun provideWaveformGenerator(
         @ApplicationContext context: Context,
     ): WaveformGenerator = WaveformGenerator(context)
+
+    @Provides
+    @Singleton
+    fun provideWorkManager(@ApplicationContext context: Context): WorkManager {
+        return WorkManager.getInstance(context)
+    }
 
     private val MIGRATION_2_3 = object : Migration(2, 3) {
         override fun migrate(db: SupportSQLiteDatabase) {

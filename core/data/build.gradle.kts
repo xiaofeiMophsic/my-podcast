@@ -23,4 +23,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.paging.runtime)
     implementation(libs.androidx.core.ktx)
+
+    implementation(libs.hilt.work)
+    implementation(libs.work.runtime.ktx)
 }

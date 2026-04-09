@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="download_management_title">Download Management</string>
+    <string name="no_downloads_yet">No downloads yet</string>
+    <string name="in_progress">In progress</string>
+    <string name="history">History</string>
+</resources>

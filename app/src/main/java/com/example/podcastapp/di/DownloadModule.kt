@@ -2,9 +2,10 @@ package com.example.podcastapp.di
 
 import android.app.DownloadManager
 import android.content.Context
-import com.example.podcastapp.core.data.DownloadController
+import androidx.work.WorkManager
 import com.example.podcastapp.core.data.DownloadRepository
 import com.example.podcastapp.core.data.WaveformRepository
+import com.example.podcastapp.core.data.download.DownloadController2
 import com.example.podcastapp.core.media.WaveformGenerator
 import dagger.Module
 import dagger.Provides
@@ -19,19 +20,10 @@ object DownloadModule {
 
     @Provides
     @Singleton
-    fun provideDownloadManager(@ApplicationContext context: Context): DownloadManager {
-        return context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-    }
-
-    @Provides
-    @Singleton
-    fun provideDownloadController(
-        @ApplicationContext context: Context,
-        downloadManager: DownloadManager,
+    fun provideDownloadController2(
+        workManager: WorkManager,
         downloadRepository: DownloadRepository,
-        waveformRepository: WaveformRepository,
-        waveformGenerator: WaveformGenerator,
-    ): DownloadController {
-        return DownloadController(context, downloadManager, downloadRepository, waveformRepository, waveformGenerator)
+    ): DownloadController2 {
+        return DownloadController2(workManager, downloadRepository)
     }
 }
