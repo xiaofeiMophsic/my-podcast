@@ -42,7 +42,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
-import androidx.compose.runtime.State
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
@@ -62,12 +61,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.podcastapp.feature.player.R
 import com.example.podcastapp.core.ui.neo.ShadowCard
-import kotlinx.coroutines.flow.compose
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -79,31 +76,8 @@ private val TextPrimary = Color(0xFF000000)
 private val CardBorder = Color(0xFF000000)
 private val AlbumCardBg = Color(0xFFFFFFFF)
 
-// --- Waveform data (normalised 0..1, derived from Figma pixel heights, max=66.3px) ---
 @JvmInline
 value class WaveBar(val height: Float)
-
-private val WAVEFORM: List<WaveBar> = listOf(
-    WaveBar(0.508f), WaveBar(0.869f), WaveBar(0.738f),
-    WaveBar(0.377f), WaveBar(0.508f), WaveBar(0.410f),
-    WaveBar(1.000f), WaveBar(0.508f), WaveBar(0.508f),
-    WaveBar(0.508f), WaveBar(0.344f), WaveBar(0.443f),
-    WaveBar(0.180f), WaveBar(0.443f), WaveBar(0.934f),
-    WaveBar(0.639f), WaveBar(0.443f), WaveBar(0.279f),
-    WaveBar(0.639f), WaveBar(0.934f), WaveBar(0.639f),
-    WaveBar(0.639f), WaveBar(0.738f), WaveBar(0.934f),
-    WaveBar(0.574f), WaveBar(0.443f), WaveBar(0.639f),
-    WaveBar(0.639f), WaveBar(0.508f),
-    WaveBar(0.869f), WaveBar(0.738f), WaveBar(0.574f),
-    WaveBar(0.508f), WaveBar(0.639f), WaveBar(1.000f),
-    WaveBar(0.508f), WaveBar(0.508f), WaveBar(0.508f),
-    WaveBar(0.246f), WaveBar(0.312f), WaveBar(0.115f),
-    WaveBar(0.312f), WaveBar(0.639f), WaveBar(0.443f),
-    WaveBar(0.312f), WaveBar(0.180f), WaveBar(0.443f),
-    WaveBar(0.639f), WaveBar(0.443f), WaveBar(0.443f),
-    WaveBar(0.508f), WaveBar(0.639f), WaveBar(0.410f),
-    WaveBar(0.312f), WaveBar(0.443f), WaveBar(0.443f),
-)
 
 // Asset URLs (Figma MCP, valid 7 days)
 private const val ALBUM_COVER =
@@ -124,6 +98,7 @@ private const val IC_NEXT =
     "https://www.figma.com/api/mcp/asset/58602731-3143-4af5-83c6-7cd52b71b5b7"
 private const val IC_MORE =
     "https://www.figma.com/api/mcp/asset/94acd51b-3167-4226-95d6-1f7fccf44851"
+
 
 @Composable
 fun NowPlayingRoute(
