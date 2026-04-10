@@ -9,7 +9,9 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.example.podcastapp.core.audioprocessing.WaveformGenerator
+import com.example.podcastapp.core.data.DownloadRepository
 import com.example.podcastapp.core.data.WaveformRepository
+import com.example.podcastapp.core.data.download.DownloadController2
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +23,8 @@ import javax.inject.Singleton
 class PlayerController @Inject constructor(
     private val context: Context,
     private val waveformRepository: WaveformRepository,
-    private val waveformGenerator: WaveformGenerator
+    private val waveformGenerator: WaveformGenerator,
+    private val downloadController: DownloadController2
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -36,7 +39,8 @@ class PlayerController @Inject constructor(
     }
 
     private fun setupMediaController() {
-        val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+        val sessionToken =
+            SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
 
         controllerFuture.addListener({
@@ -139,31 +143,26 @@ class PlayerController @Inject constructor(
         controller.prepare()
         controller.play()
 
-        // 波形生成逻辑（异步，先查缓存）
+        updateState(
+            title = title,
+            artist = artist,
+            imageUrl = imageUrl,
+            episodeId = episodeId,
+        )
+        download(
+            episodeId = episodeId,
+            title = title,
+            url = url,
+        )
+    }
+
+    private fun download(
+        episodeId: Long,
+        title: String,
+        url: String,
+    ) {
         scope.launch(Dispatchers.IO) {
-            // 先检查数据库缓存
-            val cached = waveformRepository.getWaveform(episodeId)
-            val bars = if (cached != null) {
-                // 从缓存读取
-                cached
-            } else {
-                // 没有缓存，重新生成
-                updateState(isGeneratingWaveform = true)
-                val generated = waveformGenerator.generate(url.toUri())
-                // 保存到数据库
-                waveformRepository.saveWaveform(episodeId, generated)
-                generated
-            }
-            withContext(Dispatchers.Main) {
-                updateState(
-                    waveformBars = bars,
-                    isGeneratingWaveform = false,
-                    title = title,
-                    artist = artist,
-                    imageUrl = imageUrl,
-                    episodeId = episodeId
-                )
-            }
+            downloadController.enqueue(episodeId, title, url)
         }
     }
 
@@ -179,8 +178,6 @@ class PlayerController @Inject constructor(
         positionMs: Long? = null,
         durationMs: Long? = null,
         episodeId: Long? = null,
-        waveformBars: List<Float>? = null,
-        isGeneratingWaveform: Boolean? = null,
     ) {
         val current = _state.value
         _state.value = current.copy(
@@ -191,8 +188,6 @@ class PlayerController @Inject constructor(
             positionMs = positionMs ?: current.positionMs,
             durationMs = durationMs ?: current.durationMs,
             episodeId = episodeId ?: current.episodeId,
-            waveformBars = waveformBars ?: current.waveformBars,
-            isGeneratingWaveform = isGeneratingWaveform ?: current.isGeneratingWaveform,
         )
     }
 }

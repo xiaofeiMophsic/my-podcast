@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +42,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
+import androidx.compose.runtime.State
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
@@ -62,11 +62,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.times
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.podcastapp.feature.player.R
 import com.example.podcastapp.core.ui.neo.ShadowCard
+import kotlinx.coroutines.flow.compose
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 // --- Design tokens ---
 private val ScreenBg = Color(0xFFFFFFED)  // #FFFFED
@@ -131,6 +134,8 @@ fun NowPlayingRoute(
 ) {
     val state by viewModel.metadataState.collectAsState()
     val detail by viewModel.episodeDetail.collectAsState()
+    val isGenerating by viewModel.isGeneratingWaveform.collectAsState()
+    val waveformBars by viewModel.waveformBars.collectAsState()
 
     LaunchedEffect(targetEpisodeId) {
         targetEpisodeId?.let { viewModel.playEpisodeById(it) }
@@ -143,7 +148,7 @@ fun NowPlayingRoute(
         title = state.title.ifBlank { "Take My Breath" },
         artist = state.artist ?: "The Weeknd",
         imageUrl = state.imageUrl ?: ALBUM_COVER,
-        isGeneratingWaveform = state.isGeneratingWaveform,
+        isGeneratingWaveform = isGenerating,
         isPlaying = { viewModel.playingState.collectAsState().value },
         durationMs = state.durationMs,
         progress = {
@@ -152,7 +157,7 @@ fun NowPlayingRoute(
                 (currentProgress.toFloat() / state.durationMs).coerceIn(0f, 1f)
             } else 0f
         },
-        waveformBars = { state.waveformBars },
+        waveformBars = waveformBars,
         detail = detail,
         onBack = onBack,
         onOpenDownloads = onOpenDownloads,
@@ -182,7 +187,7 @@ fun NowPlayingScreen(
     isPlaying: @Composable ()->Boolean,
     durationMs: Long,
     progress: @Composable () -> Float,
-    waveformBars: ()->List<Float>,
+    waveformBars: List<WaveBar>,
     detail: NowPlayingEpisodeDetail,
     onBack: () -> Unit,
     onOpenDownloads: () -> Unit,
@@ -196,13 +201,6 @@ fun NowPlayingScreen(
     var showTopMenu by remember { mutableStateOf(false) }
 
     // Cache WaveBar list - only recreate when waveformBars actually changes
-    val cachedBarsState by rememberUpdatedState(waveformBars)
-    val cachedBars by remember {
-        derivedStateOf {
-            val bars = cachedBarsState()
-            if (bars.isNotEmpty()) bars.map { WaveBar(it) } else WAVEFORM
-        }
-    }
 
     Box(
         modifier = Modifier
@@ -311,7 +309,7 @@ fun NowPlayingScreen(
                 )
             } else {
                 AudioWaveform(
-                    bars = { cachedBars },
+                    waveformBars = waveformBars,
                     progress = progress,
                     onSeekTo = onSeekTo,
                     onScrub = { scrubFraction = it },
@@ -472,7 +470,7 @@ private fun AlbumArtSection(
 
 @Composable
 private fun AudioWaveform(
-    bars: () -> List<WaveBar>,
+    waveformBars: List<WaveBar>,
     progress: @Composable () -> Float,
     onSeekTo: (Float) -> Unit,
     onScrub: (Float) -> Unit,
@@ -484,8 +482,7 @@ private fun AudioWaveform(
     val spacingPx = with(density) { 3.dp.toPx() }
 
     val currentProgressProvider by rememberUpdatedState(progress)
-
-    val barList = remember { bars() }
+    val barList = waveformBars
 
     val animatedProgress by animateFloatAsState(
         targetValue = currentProgressProvider(),
@@ -758,30 +755,55 @@ private fun WaveformLoading(
     modifier: Modifier = Modifier,
 ) {
     val infiniteTransition = rememberInfiniteTransition()
-    val shimmerAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.7f,
+    val time by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * kotlin.math.PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
         ), label = "shimmer"
     )
 
-    val barCount = 50
+    // Base random heights - fixed random pattern
+    val baseHeights = remember {
+        List(50) { i ->
+            // Use position-based pseudo-random for consistency
+            val noise = Random(i).nextFloat()
+            0.25f + noise * 0.45f // 25% ~ 70% base height range
+        }
+    }
+
+    val dp8 = with(LocalDensity.current) { 8.dp.toPx() }
+    // Base random vertical offsets
+    val baseOffsets = remember {
+        List(50) { i ->
+            val noise = Random(i + 1000).nextFloat()
+            (noise - 0.5f) * dp8 // -4dp ~ +4dp static random
+        }
+    }
+
     Canvas(modifier = modifier) {
         val barWidthPx = 4.dp.toPx()
         val spacingPx = 3.dp.toPx()
         val maxHeight = size.height
 
-        for (i in 0 until barCount) {
+        repeat(50) { i ->
             val x = i * (barWidthPx + spacingPx)
-            val randomHeight = (0.3f + (i % 3) * 0.2f) * maxHeight
-            val y = (maxHeight - randomHeight) / 2f
+            // Phase offset increases from left to right
+            // time - phase creates wave traveling to the right
+            // left bars move first, right bars follow - correct direction
+            val phase = (i / 50f) * 2 * kotlin.math.PI.toFloat()
+            // Each bar height animates independently - looks like sound wave moving right
+            val heightNorm = baseHeights[i] + 0.2f * kotlin.math.sin(time - phase)
+            val barHeight = heightNorm.coerceIn(0.15f, 0.85f) * maxHeight
+            val baseY = (maxHeight - barHeight) / 2f
+            val y = baseY + baseOffsets[i]
 
+            // Constant alpha - height animation creates the wave movement effect
             drawRoundRect(
-                color = WaveGray.copy(alpha = shimmerAlpha),
+                color = WaveGray.copy(alpha = 0.5f),
                 topLeft = Offset(x, y),
-                size = Size(barWidthPx, randomHeight),
+                size = Size(barWidthPx, barHeight),
                 cornerRadius = CornerRadius(barWidthPx / 2f)
             )
         }

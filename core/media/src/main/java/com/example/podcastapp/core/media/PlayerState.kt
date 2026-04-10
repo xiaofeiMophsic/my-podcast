@@ -8,8 +8,6 @@ data class PlayerState(
     val positionMs: Long = 0,
     val durationMs: Long = 0,
     val episodeId: Long? = null,
-    val waveformBars: List<Float> = emptyList(),
-    val isGeneratingWaveform: Boolean = false,
 )
 
 /** 去掉进度信息 */
@@ -19,6 +17,4 @@ data class MetadataState(
     val imageUrl: String? = null,
     val durationMs: Long = 0,
     val episodeId: Long? = null,
-    val waveformBars: List<Float> = emptyList(),
-    val isGeneratingWaveform: Boolean = false,
 )

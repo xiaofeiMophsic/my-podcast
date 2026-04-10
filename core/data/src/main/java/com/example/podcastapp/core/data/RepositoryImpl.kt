@@ -17,6 +17,7 @@ import com.example.podcastapp.core.network.RssFetcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import java.nio.ByteBuffer
 
 class PodcastRepositoryImpl(
     private val podcastDao: PodcastDao,
@@ -142,20 +143,44 @@ class WaveformRepositoryImpl(
 
     override suspend fun getWaveform(episodeId: Long): List<Float>? {
         val entity = waveformDao.getByEpisodeId(episodeId) ?: return null
-        if (entity.barsCsv.isBlank()) return null
-        val bars = entity.barsCsv.split(",")
-            .mapNotNull { it.toFloatOrNull() }
-            .map { it.coerceIn(0f, 1f) }
+        if (entity.barsBlob.isEmpty()) return null
+
+        // Decode: ByteArray (BLOB) → FloatArray → List<Float>
+        val buffer = ByteBuffer.wrap(entity.barsBlob)
+        val floatArray = FloatArray(buffer.remaining() / 4)
+        buffer.asFloatBuffer().get(floatArray)
+
+        val bars = floatArray.toList().map { it.coerceIn(0f, 1f) }
         // 如果解析出来是空的，返回null让它重新生成
-        return if (bars.isEmpty()) null else bars
+        return bars.ifEmpty { null }
+    }
+
+    override fun observeWaveform(episodeId: Long): Flow<List<Float>?> {
+        return waveformDao.observeByEpisodeId(episodeId).map { entity ->
+            if (entity == null || entity.barsBlob.isEmpty()) return@map null
+
+            // Decode: ByteArray (BLOB) → FloatArray → List<Float>
+            val buffer = ByteBuffer.wrap(entity.barsBlob)
+            val floatArray = FloatArray(buffer.remaining() / 4)
+            buffer.asFloatBuffer().get(floatArray)
+
+            val bars = floatArray.toList().map { it.coerceIn(0f, 1f) }
+            bars.ifEmpty { null }
+        }.distinctUntilChanged()
     }
 
     override suspend fun saveWaveform(episodeId: Long, bars: List<Float>) {
-        val csv = bars.joinToString(separator = ",") { it.coerceIn(0f, 1f).toString() }
+        // Encode: List<Float> → FloatArray → ByteBuffer → ByteArray (BLOB)
+        val normalizedBars = bars.map { it.coerceIn(0f, 1f) }
+        val floatArray = normalizedBars.toFloatArray()
+        val buffer = ByteBuffer.allocate(floatArray.size * 4)
+        buffer.asFloatBuffer().put(floatArray)
+        val bytes = buffer.array()
+
         waveformDao.upsert(
             EpisodeWaveformEntity(
                 episodeId = episodeId,
-                barsCsv = csv,
+                barsBlob = bytes,
                 updatedAt = System.currentTimeMillis(),
             )
         )

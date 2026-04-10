@@ -29,6 +29,10 @@ class WaveformGenerator(
             if (amplitudes.isEmpty()) return@withContext emptyList()
             val normalized = normalize2(amplitudes)
             downsample(normalized, targetBars)
+        } catch (e: Throwable) {
+            // Amplituda can crash with ArrayIndexOutOfBoundsException for remote URLs
+            // Return empty list to indicate failure
+            emptyList()
         } finally {
             tempFile?.delete()
         }
@@ -46,11 +50,15 @@ class WaveformGenerator(
 
     private fun resolveSource(uri: Uri): Pair<String, File?>? {
         return when (uri.scheme?.lowercase()) {
-            "http", "https" -> uri.toString() to null
+            "http", "https" -> {
+                // Amplituda's internal network handling is buggy and causes ArrayIndexOutOfBoundsException
+                // Remote URLs must be downloaded locally first before processing
+                null
+            }
             "content" -> copyToCache(uri)
             "file" -> uri.path?.let { it to null }
-            null -> uri.toString() to null
-            else -> uri.toString() to null
+            null -> null
+            else -> null
         }
     }
 

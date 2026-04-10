@@ -56,7 +56,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, "podcast.db")
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
     }
 
@@ -140,6 +140,21 @@ object AppModule {
         override fun migrate(db: SupportSQLiteDatabase) {
             // Add author column to episodes table
             db.execSQL("ALTER TABLE episodes ADD COLUMN `author` TEXT")
+        }
+    }
+
+    private val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // Drop old table with CSV format and recreate with BLOB
+            // This clears all old waveform data as requested
+            db.execSQL("DROP TABLE IF EXISTS episode_waveforms")
+            db.execSQL(
+                "CREATE TABLE episode_waveforms (" +
+                    "episodeId INTEGER NOT NULL PRIMARY KEY, " +
+                    "barsBlob BLOB NOT NULL, " +
+                    "updatedAt INTEGER NOT NULL" +
+                    ")"
+            )
         }
     }
 }

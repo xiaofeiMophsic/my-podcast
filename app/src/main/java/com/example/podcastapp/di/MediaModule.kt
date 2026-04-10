@@ -20,8 +20,9 @@ object MediaModule {
     fun providePlayerController(
         @ApplicationContext context: Context,
         waveformRepository: WaveformRepository,
-        waveformGenerator: WaveformGenerator
+        waveformGenerator: WaveformGenerator,
+        downloadController: com.example.podcastapp.core.data.download.DownloadController2
     ): PlayerController {
-        return PlayerController(context, waveformRepository, waveformGenerator)
+        return PlayerController(context, waveformRepository, waveformGenerator, downloadController)
     }
 }

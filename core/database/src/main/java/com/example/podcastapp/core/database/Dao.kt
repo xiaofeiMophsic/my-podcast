@@ -112,6 +112,9 @@ interface WaveformDao {
     @Query("SELECT * FROM episode_waveforms WHERE episodeId = :episodeId")
     suspend fun getByEpisodeId(episodeId: Long): EpisodeWaveformEntity?
 
+    @Query("SELECT * FROM episode_waveforms WHERE episodeId = :episodeId")
+    fun observeByEpisodeId(episodeId: Long): Flow<EpisodeWaveformEntity?>
+
     @Upsert
     suspend fun upsert(item: EpisodeWaveformEntity)
 }

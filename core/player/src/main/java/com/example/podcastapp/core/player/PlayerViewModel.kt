@@ -17,7 +17,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -29,6 +32,7 @@ class PlayerViewModel @Inject constructor(
     private val controller: PlayerController,
     private val episodeRepository: EpisodeRepository,
     private val downloadRepository: DownloadRepository,
+    private val waveformRepository: com.example.podcastapp.core.data.WaveformRepository,
 ) : ViewModel() {
 
     val playerState: StateFlow<PlayerState> = controller.state
@@ -41,13 +45,35 @@ class PlayerViewModel @Inject constructor(
             imageUrl = it.imageUrl,
             durationMs = it.durationMs,
             episodeId = it.episodeId,
-            waveformBars = it.waveformBars,
-            isGeneratingWaveform = it.isGeneratingWaveform
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MetadataState())
 
     val progressState = playerState.map { it.positionMs }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     val playingState = playerState.map { it.isPlaying }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    private val _waveformBars = MutableStateFlow<List<WaveBar>>(emptyList())
+    val waveformBars: StateFlow<List<WaveBar>> = _waveformBars.asStateFlow()
+
+    private val _isGeneratingWaveform = MutableStateFlow(true)
+    val isGeneratingWaveform: StateFlow<Boolean> = _isGeneratingWaveform.asStateFlow()
+
+    // Observe waveform changes when current episode changes
+    init {
+        playerState.map { it.episodeId }.distinctUntilChanged().onEach { episodeId ->
+            if (episodeId == null) {
+                _waveformBars.value = emptyList()
+                _isGeneratingWaveform.value = false
+            } else {
+                // Start observing waveform from database
+                waveformRepository.observeWaveform(episodeId)
+                    .distinctUntilChanged()
+                    .collect { bars ->
+                        _waveformBars.value = bars.orEmpty().map { WaveBar(it) }
+                        _isGeneratingWaveform.value = bars == null
+                    }
+            }
+        }.launchIn(viewModelScope)
+    }
 
     private val _episodeDetail = MutableStateFlow(NowPlayingEpisodeDetail())
     val episodeDetail: StateFlow<NowPlayingEpisodeDetail> = _episodeDetail.asStateFlow()

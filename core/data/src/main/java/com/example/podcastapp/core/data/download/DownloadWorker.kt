@@ -29,9 +29,9 @@ class DownloadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        val episodeId = inputData.getLong("episodeId", -1L)
-        val url = inputData.getString("url") ?: return Result.failure()
-        val title = inputData.getString("title") ?: "unknown"
+        val episodeId = inputData.getLong(DownloadController2.WORK_DATA_PARAM_EPISODE, -1L)
+        val url = inputData.getString(DownloadController2.WORK_DATA_PARAM_URL) ?: return Result.failure()
+        val title = inputData.getString(DownloadController2.WORK_DATA_PARAM_TITLE) ?: "unknown"
 
         if (episodeId == -1L) return Result.failure()
 
