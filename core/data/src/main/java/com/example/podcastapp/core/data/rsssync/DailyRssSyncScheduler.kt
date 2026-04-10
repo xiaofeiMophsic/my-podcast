@@ -22,7 +22,7 @@ class DailyRssSyncScheduler @Inject constructor(
             .setConstraints(constraints)
             .build()
 
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+        workManager.enqueueUniquePeriodicWork(
             DailyRssSyncWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,
             request,

@@ -93,6 +93,9 @@ compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-mani
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
+# Add the following plugin definition
+legacy-kapt = { id = "com.android.legacy-kapt", version.ref = "agp" }
+
 ksp = { id = "com.google.devtools.ksp", version = "2.3.4" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

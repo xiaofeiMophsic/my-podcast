@@ -11,8 +11,9 @@ import com.example.podcastapp.core.database.DownloadEntity
 import com.example.podcastapp.core.database.DownloadStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
-class DownloadController2(
+class DownloadController2 @Inject constructor(
     private val workManager: WorkManager,
     private val downloadRepository: DownloadRepository
 ) {
@@ -38,11 +39,7 @@ class DownloadController2(
             // 2. 提交 WorkManager 任务
             val downloadRequest = OneTimeWorkRequestBuilder<DownloadWorker>()
                 .setConstraints(
-                    Constraints.NONE
-//                    Constraints.Builder()
-//                        .setRequiredNetworkType(NetworkType.CONNECTED)
-//                        .setRequiresStorageNotLow(true)
-//                        .build()
+                    downloadConstraint()
                 )
                 .setInputData(
                     workDataOf(
@@ -70,7 +67,14 @@ class DownloadController2(
         }
     }
 
+    private fun downloadConstraint() =
+        Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresStorageNotLow(true)
+            .build()
+
     private fun getWorkTag(episodeId: Long) = "$WORK_TAG_PREFIX$episodeId"
+
     companion object {
         const val WORK_TAG_PREFIX = "download_"
         const val WORK_DATA_PARAM_EPISODE = "episodeId"

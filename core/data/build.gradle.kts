@@ -1,5 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
+//    alias(libs.plugins.legacy.kapt)
 }
 
 android {
@@ -24,6 +27,10 @@ dependencies {
     implementation(libs.paging.runtime)
     implementation(libs.androidx.core.ktx)
 
+    implementation(libs.hilt.android)
     implementation(libs.hilt.work)
     implementation(libs.work.runtime.ktx)
+    ksp(libs.hilt.compiler)
+//    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.androidx.compiler)
 }

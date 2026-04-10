@@ -21,7 +21,7 @@ import java.io.IOException
 @HiltWorker
 class DownloadWorker @AssistedInject constructor(
     @Assisted private val context: Context,
-    @Assisted workerParams: WorkerParameters,
+    @Assisted private val workerParams: WorkerParameters,
     private val repository: DownloadRepository,
     private val waveformGenerator: WaveformGenerator,
     private val waveformRepository: WaveformRepository,

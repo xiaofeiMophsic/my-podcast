@@ -1,6 +1,7 @@
 package com.example.podcastapp
 
 import android.app.Application
+import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.example.podcastapp.core.data.rsssync.DailyRssSyncScheduler
@@ -19,6 +20,7 @@ class PodcastApplication : Application(), Configuration.Provider {
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
+            .setMinimumLoggingLevel(Log.DEBUG)
             .build()
 
     override fun onCreate() {
