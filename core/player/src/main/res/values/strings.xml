@@ -10,4 +10,6 @@
     <string name="episode_details">Episode details</string>
     <string name="published_format">Published %1$s</string>
     <string name="no_details_available">No details available</string>
+    <string name="sample_track_title" translatable="false">Take My Breath</string>
+    <string name="sample_track_progress" translatable="false">00:02/30:34</string>
 </resources>

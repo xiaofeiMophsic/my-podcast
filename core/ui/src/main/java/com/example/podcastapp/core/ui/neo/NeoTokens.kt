@@ -13,6 +13,7 @@ object NeoColors {
     val TextSecondary = Color(0xFF6B6B6B)
     val TextOnPrimary = Color(0xFFFFFFFF)
     val AccentGreen = Color(0xFF87B800)
+    val OnSecondary = Color(0xFFF5F5F5)
     val NavBg = Color(0xFFFFFFFF)
     val NavBorder = Color(0xFFD9D9D9)
     val NavBorderSelected = Color(0xFF000000)
