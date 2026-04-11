@@ -1,6 +1,7 @@
 package com.example.podcastapp.core.ui.neo
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -21,10 +22,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.podcastapp.core.ui.R
 
 @Composable
 fun ShadowCard(
@@ -62,16 +65,11 @@ fun NeoTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
-            Surface(
-                modifier = Modifier.size(36.dp),
-                shape = CircleShape,
-                color = NeoColors.Ink,
-                border = BorderStroke(0.75.dp, NeoColors.NavBorder),
-                onClick = onBack,
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
-                    Text("←", color = NeoColors.CardBg, fontSize = 16.sp)
-                }
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(36.dp)) {
+                Image(
+                    painter = painterResource(R.drawable.ic_back),
+                    contentDescription = "Back"
+                )
             }
         } else {
             Spacer(modifier = Modifier.size(36.dp))
@@ -110,7 +108,12 @@ fun NeoPrimaryButton(
         border = BorderStroke(1.dp, NeoColors.CardBorder),
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
-            Text(text = text, color = NeoColors.CardBg, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = text,
+                color = NeoColors.CardBg,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -132,7 +135,12 @@ fun NeoOutlineButton(
         border = BorderStroke(1.dp, border),
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
-            Text(text = text, color = NeoColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = text,
+                color = NeoColors.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

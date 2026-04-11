@@ -2,7 +2,6 @@ package com.example.podcastapp.core.player
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,19 +24,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.podcastapp.feature.player.R
 import com.example.podcastapp.core.ui.neo.NeoColors
 import com.example.podcastapp.core.ui.theme.PodcastTheme
+import com.example.podcastapp.feature.player.R
 
 @Composable
 fun NeoMiniPlayer(
@@ -53,9 +54,12 @@ fun NeoMiniPlayer(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp),
-        color = Color.White,
-        shadowElevation = 8.dp
+            .height(56.dp)
+            .dropShadow(
+                shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp), shadow = Shadow(
+                    radius = 6.dp, color = Color(0x1A000000), offset = DpOffset(0.dp, (-4).dp)
+                )
+            ), color = Color.White, shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
     ) {
         Row(
             modifier = Modifier
@@ -76,8 +80,7 @@ fun NeoMiniPlayer(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
+                modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = title,
@@ -109,7 +112,10 @@ fun NeoMiniPlayer(
                     trackColor = NeoColors.OnSecondary,
                 )
                 Image(
-                    painter = painterResource(id = R.drawable.miniplayer_play),
+                    painter =
+                        if (isPlaying)
+                            painterResource(id = R.drawable.miniplayer_pause)
+                        else painterResource(id = R.drawable.miniplayer_play),
                     contentDescription = if (isPlaying) "Pause" else "Play",
                     modifier = Modifier.size(16.dp)
                 )
@@ -122,8 +128,7 @@ fun NeoMiniPlayer(
                     .size(36.dp)
                     .clip(CircleShape)
                     .background(Color(0x3387B800))
-                    .clickable(onClick = onPlayListClick),
-                contentAlignment = Alignment.Center
+                    .clickable(onClick = onPlayListClick), contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.miniplayer_list),
