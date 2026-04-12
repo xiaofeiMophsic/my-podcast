@@ -25,6 +25,7 @@ include(
     ":core:datastore",
     ":core:media",
     ":core:data",
+    ":core:navigation",
     ":core:audio-processing",
     ":core:player",
     ":feature:podcast",

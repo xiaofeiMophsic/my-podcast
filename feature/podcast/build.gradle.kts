@@ -34,6 +34,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:media"))
     implementation(project(":core:player"))
+    implementation(project(":core:navigation"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
