@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -156,6 +157,7 @@ fun NeoTextField(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     inputModifier: Modifier = Modifier,
+    trailingIcon: @Composable (() -> Unit)? = null,
 ) {
     ShadowCard(modifier = modifier) {
         Box(
@@ -177,6 +179,15 @@ fun NeoTextField(
                 ),
                 modifier = inputModifier.fillMaxWidth(),
             )
+            if (trailingIcon != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .wrapContentSize()
+                ) {
+                    trailingIcon()
+                }
+            }
         }
     }
 }

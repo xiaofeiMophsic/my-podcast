@@ -3,6 +3,7 @@ package com.example.podcastapp.feature.episode
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,9 +16,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +45,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.podcastapp.core.database.EpisodeEntity
+import com.example.podcastapp.core.ui.R
 import com.example.podcastapp.core.ui.neo.NeoColors
 import com.example.podcastapp.core.ui.neo.NeoShapes
 import com.example.podcastapp.core.ui.neo.NeoTextField
@@ -165,6 +171,17 @@ fun SearchScreen(
                     placeholder = "Search episodes",
                     modifier = Modifier.fillMaxWidth(),
                     inputModifier = Modifier.focusRequester(focusRequester),
+                    trailingIcon = if (query.isNotEmpty()) {
+                        {
+                            Image(
+                                painter = painterResource(R.drawable.ic_clear),
+                                contentDescription = "Clear",
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable { onQueryChange("") }
+                            )
+                        }
+                    } else null,
                 )
                 AnimatedVisibility(visible = isEmptyQuery) {
                     Text(
