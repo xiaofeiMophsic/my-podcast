@@ -90,6 +90,7 @@ fun HomeRoute(
             onPlayerClick(episode.id)
         },
         onPlayListClick = onPlayListClick,
+        onPlayerClick = onPlayerClick,
     )
 }
 
@@ -100,6 +101,7 @@ fun HomeScreen(
     onAddRssClick: () -> Unit = {},
     onEpisodeClick: (EpisodeEntity) -> Unit = {},
     onPlayListClick: () -> Unit = {},
+    onPlayerClick: (episodeId: Long) -> Unit = {},
 ) {
     Scaffold(
         bottomBar = {
@@ -108,7 +110,10 @@ fun HomeScreen(
                     .background(Color.White)
                     .navigationBarsPadding()
             ) {
-                GlobalMiniPlayerBar(onPlayListClick = onPlayListClick)
+                GlobalMiniPlayerBar(
+                    onPlayListClick = onPlayListClick,
+                    onPlayerClick = onPlayerClick,
+                )
                 HomeBottomNav(onSearchClick = onSearchClick, onAddRssClick = onAddRssClick)
             }
         },

@@ -3,7 +3,6 @@ package com.example.podcastapp.core.player
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -13,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun GlobalMiniPlayerBar(
     onPlayListClick: () -> Unit,
+    onPlayerClick: (episodeId: Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = hiltViewModel(LocalContext.current as ComponentActivity),
 ) {
@@ -20,7 +20,7 @@ fun GlobalMiniPlayerBar(
     val progressMsState = viewModel.progressState.collectAsStateWithLifecycle()
     val isPlayingState = viewModel.playingState.collectAsStateWithLifecycle()
 
-    if (playerState.episodeId != null) {
+    playerState.episodeId?.let { episodeId ->
         Column(modifier = modifier) {
             NeoMiniPlayer(
                 title = playerState.title,
@@ -29,6 +29,7 @@ fun GlobalMiniPlayerBar(
                 isPlaying = { isPlayingState.value },
                 onPlayPauseClick = { viewModel.togglePlayPause() },
                 onPlayListClick = onPlayListClick,
+                onMiniPlayerClick = { onPlayerClick(episodeId)},
                 imageUrl = playerState.imageUrl,
             )
         }

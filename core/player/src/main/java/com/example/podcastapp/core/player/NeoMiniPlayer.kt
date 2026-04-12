@@ -55,6 +55,7 @@ fun NeoMiniPlayer(
     isPlaying: () -> Boolean,
     onPlayPauseClick: () -> Unit,
     onPlayListClick: () -> Unit,
+    onMiniPlayerClick: () -> Unit,
     modifier: Modifier = Modifier,
     imageUrl: String? = null,
 ) {
@@ -69,7 +70,10 @@ fun NeoMiniPlayer(
                     color = Color(0x1A000000),
                     offset = DpOffset(0.dp, (-4).dp)
                 )
-            ), color = Color.White, shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
+            )
+            .clickable(onClick = onMiniPlayerClick),
+        color = Color.White,
+        shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
     ) {
         Row(
             modifier = Modifier
@@ -208,6 +212,7 @@ fun NeoMiniPlayerPreview() {
             isPlaying = { false },
             onPlayPauseClick = {},
             onPlayListClick = {},
+            onMiniPlayerClick = {},
         )
     }
 }
