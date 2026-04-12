@@ -3,6 +3,7 @@ package com.example.podcastapp.di
 import android.app.DownloadManager
 import android.content.Context
 import androidx.work.WorkManager
+import com.example.podcastapp.core.audioprocessing.WaveformGenerator
 import com.example.podcastapp.core.data.DownloadRepository
 import com.example.podcastapp.core.data.WaveformRepository
 import com.example.podcastapp.core.data.download.DownloadController2
@@ -22,7 +23,9 @@ object DownloadModule {
     fun provideDownloadController2(
         workManager: WorkManager,
         downloadRepository: DownloadRepository,
+        waveformRepository: WaveformRepository,
+        waveformGenerator: WaveformGenerator
     ): DownloadController2 {
-        return DownloadController2(workManager, downloadRepository)
+        return DownloadController2(workManager, downloadRepository, waveformRepository, waveformGenerator)
     }
 }

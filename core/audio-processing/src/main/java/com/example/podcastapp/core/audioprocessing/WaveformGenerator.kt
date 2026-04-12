@@ -26,7 +26,7 @@ class WaveformGenerator(
 ) {
     private val amplituda: Amplituda by lazy { Amplituda(context) }
 
-    suspend fun generate(uri: Uri, maxBars: Int = DEFAULT_MAX_BARS): FloatArray = withContext(Dispatchers.IO) {
+    suspend fun generate(uri: Uri, maxBars: Int = DEFAULT_MAX_BARS): FloatArray = withContext(Dispatchers.Default) {
         val (source, tempFile) = resolveSource(uri) ?: return@withContext floatArrayOf()
         try {
             val durationMs = extractDurationMs(uri, source)

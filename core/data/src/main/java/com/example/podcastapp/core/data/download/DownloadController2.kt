@@ -1,28 +1,39 @@
 package com.example.podcastapp.core.data.download
 
+import android.util.Printer
+import androidx.core.net.toUri
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.example.podcastapp.core.audioprocessing.WaveformGenerator
 import com.example.podcastapp.core.data.DownloadRepository
+import com.example.podcastapp.core.data.WaveformRepository
 import com.example.podcastapp.core.database.DownloadEntity
 import com.example.podcastapp.core.database.DownloadStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 class DownloadController2 @Inject constructor(
     private val workManager: WorkManager,
-    private val downloadRepository: DownloadRepository
+    private val downloadRepository: DownloadRepository,
+    private val waveformRepository: WaveformRepository,
+    private val waveformGenerator: WaveformGenerator
 ) {
     suspend fun enqueue(episodeId: Long, title: String, url: String) {
         withContext(Dispatchers.IO) {
             // 先检查是否已经下载完成
             val existing = downloadRepository.getByEpisode(episodeId)
-            if (existing != null && existing.status == DownloadStatus.COMPLETED) {
+            if (existing != null && existing.status == DownloadStatus.COMPLETED && existing.localPath != null) {
                 // 已经下载完成，不需要重复下载
+                existing.localPath?.let {
+                    generateWave(episodeId, it)
+
+                }
                 return@withContext
             }
 
@@ -74,6 +85,17 @@ class DownloadController2 @Inject constructor(
             .build()
 
     private fun getWorkTag(episodeId: Long) = "$WORK_TAG_PREFIX$episodeId"
+
+    private suspend fun generateWave(id: Long, path: String) {
+        val existing = waveformRepository.getWaveform(id)
+        if (existing == null) {
+            // 没有缓存才生成，避免重复工作
+            val bars = waveformGenerator.generate(File(path).toUri())
+            if (bars.isNotEmpty()) {
+                waveformRepository.saveWaveform(id, bars)
+            }
+        }
+    }
 
     companion object {
         const val WORK_TAG_PREFIX = "download_"
