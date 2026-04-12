@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.podcastapp.core.database.EpisodeEntity
+import com.example.podcastapp.core.player.GlobalMiniPlayerBar
 import com.example.podcastapp.core.ui.neo.NeoColors
 import com.example.podcastapp.core.ui.neo.ShadowCard
 
@@ -68,6 +69,7 @@ fun HomeRoute(
     onSearchClick: () -> Unit = {},
     onPlayerClick: (episodeId: Long) -> Unit = {},
     onAddRssClick: () -> Unit = {},
+    onPlayListClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -79,6 +81,7 @@ fun HomeRoute(
 //            viewModel.playEpisode(episode)
             onPlayerClick(episode.id)
         },
+        onPlayListClick = onPlayListClick,
     )
 }
 
@@ -88,9 +91,15 @@ fun HomeScreen(
     onSearchClick: () -> Unit = {},
     onAddRssClick: () -> Unit = {},
     onEpisodeClick: (EpisodeEntity) -> Unit = {},
+    onPlayListClick: () -> Unit = {},
 ) {
     Scaffold(
-        bottomBar = { HomeBottomNav(onSearchClick = onSearchClick, onAddRssClick = onAddRssClick) },
+        bottomBar = {
+            Column {
+                GlobalMiniPlayerBar(onPlayListClick = onPlayListClick)
+                HomeBottomNav(onSearchClick = onSearchClick, onAddRssClick = onAddRssClick)
+            }
+        },
         containerColor = NeoColors.ScreenBg,
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {

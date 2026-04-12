@@ -18,6 +18,7 @@ object NeoColors {
     val NavBorder = Color(0xFFD9D9D9)
     val NavBorderSelected = Color(0xFF000000)
     val Ink = Color(0xFF000000)
+    val LightGray = Color(0xFFC4C4C4)
 }
 
 object NeoShapes {

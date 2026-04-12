@@ -1,5 +1,6 @@
 package com.example.podcastapp.core.player
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -54,6 +55,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,8 +67,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.podcastapp.feature.player.R
 import com.example.podcastapp.core.ui.neo.ShadowCard
-import kotlin.math.roundToInt
+import com.example.podcastapp.core.ui.utils.toPlaybackString
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 // --- Design tokens ---
 private val ScreenBg = Color(0xFFFFFFED)  // #FFFFED
@@ -105,12 +109,15 @@ fun NowPlayingRoute(
     onBack: () -> Unit,
     targetEpisodeId: Long? = null,
     onOpenDownloads: () -> Unit = {},
-    viewModel: PlayerViewModel = hiltViewModel(),
+    viewModel: PlayerViewModel = hiltViewModel(LocalContext.current as ComponentActivity),
 ) {
     val state by viewModel.metadataState.collectAsState()
     val detail by viewModel.episodeDetail.collectAsState()
     val isGenerating by viewModel.isGeneratingWaveform.collectAsState()
     val waveformBars by viewModel.waveformBars.collectAsState()
+
+    val playingState = viewModel.playingState.collectAsState()
+    val progressState = viewModel.progressState.collectAsState()
 
     LaunchedEffect(targetEpisodeId) {
         targetEpisodeId?.let { viewModel.playEpisodeById(it) }
@@ -124,10 +131,10 @@ fun NowPlayingRoute(
         artist = state.artist ?: "The Weeknd",
         imageUrl = state.imageUrl ?: ALBUM_COVER,
         isGeneratingWaveform = isGenerating,
-        isPlaying = { viewModel.playingState.collectAsState().value },
+        isPlaying = { playingState.value },
         durationMs = state.durationMs,
         progress = {
-            val currentProgress = viewModel.progressState.collectAsState().value
+            val currentProgress = progressState.value
             if (state.durationMs > 0) {
                 (currentProgress.toFloat() / state.durationMs).coerceIn(0f, 1f)
             } else 0f
@@ -159,9 +166,9 @@ fun NowPlayingScreen(
     artist: String,
     imageUrl: String,
     isGeneratingWaveform: Boolean,
-    isPlaying: @Composable ()->Boolean,
+    isPlaying: () -> Boolean,
     durationMs: Long,
-    progress: @Composable () -> Float,
+    progress: () -> Float,
     waveformBars: List<WaveBar>,
     detail: NowPlayingEpisodeDetail,
     onBack: () -> Unit,
@@ -297,9 +304,10 @@ fun NowPlayingScreen(
 
             if (scrubFraction != null && !isGeneratingWaveform) {
                 val showFraction = scrubFraction ?: progress()
-                val showTime = formatTimeFromFraction(showFraction, durationMs)
+                val fractionDuration = durationMs / 1000 * (showFraction.coerceIn(0f, 1f)).toLong()
+                val showTime = fractionDuration.seconds.toPlaybackString()
                 Text(
-                    text = "${showTime} / ${formatDuration(durationMs)}",
+                    text = "${showTime} / ${durationMs.milliseconds.toPlaybackString()}",
                     fontSize = 12.sp,
                     color = TextPrimary,
                     modifier = Modifier
@@ -388,22 +396,6 @@ fun NowPlayingScreen(
 }
 
 @Composable
-private fun ShowTime(
-    modifier: Modifier,
-    showTime: @Composable () -> String,
-    durationMs: Long
-) {
-    Text(
-        text = "${showTime()} / ${formatDuration(durationMs)}",
-        fontSize = 12.sp,
-        color = TextPrimary,
-        modifier = modifier.padding(top = 8.dp),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
-}
-
-@Composable
 private fun AlbumArtSection(
     imageUrl: String,
     onClick: () -> Unit,
@@ -446,7 +438,7 @@ private fun AlbumArtSection(
 @Composable
 private fun AudioWaveform(
     waveformBars: List<WaveBar>,
-    progress: @Composable () -> Float,
+    progress: () -> Float,
     onSeekTo: (Float) -> Unit,
     onScrub: (Float) -> Unit,
     onScrubEnd: () -> Unit,
@@ -567,24 +559,9 @@ private fun AudioWaveform(
     }
 }
 
-private fun formatTimeFromFraction(fraction: Float, durationMs: Long): String {
-    val clamped = fraction.coerceIn(0f, 1f)
-    val totalSeconds = ((durationMs / 1000f) * clamped).roundToInt()
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format("%d:%02d", minutes, seconds)
-}
-
-private fun formatDuration(durationMs: Long): String {
-    val totalSeconds = (durationMs / 1000f).roundToInt()
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
-}
-
 @Composable
 private fun TransportControls(
-    isPlaying: @Composable () -> Boolean,
+    isPlaying: () -> Boolean,
     onSeekPrev: () -> Unit,
     onTogglePlay: () -> Unit,
     onSeekNext: () -> Unit,

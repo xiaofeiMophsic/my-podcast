@@ -33,6 +33,7 @@ dependencies {
     implementation(project(":core:datastore"))
     implementation(project(":core:data"))
     implementation(project(":core:media"))
+    implementation(project(":core:player"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
