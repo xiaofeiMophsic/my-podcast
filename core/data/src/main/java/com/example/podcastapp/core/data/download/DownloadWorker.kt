@@ -14,6 +14,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -46,7 +47,16 @@ class DownloadWorker @AssistedInject constructor(
 
             val body = response.body ?: throw IOException("Empty body")
             val totalBytes = body.contentLength()
+
+
             val file = File(context.getExternalFilesDir(null), "downloads/${episodeId}.mp3")
+            val baseDir = context.getExternalFilesDir(null) ?: context.filesDir // 兜底方案
+            val downloadFolder = File(baseDir, "downloads")
+
+            // 务必检查并创建
+            if (!downloadFolder.exists()) {
+                downloadFolder.mkdirs()
+            }
 
             // 写入文件并实时更新进度
             body.byteStream().use { input ->
@@ -74,6 +84,8 @@ class DownloadWorker @AssistedInject constructor(
             handleSuccess(episodeId, file.absolutePath)
             Result.success()
         } catch (e: Exception) {
+            Timber.e(e, "Error downloading episode $episodeId, url: $url")
+            // 失败后的后续处理")
             handleFailure(episodeId)
             Result.failure()
         }

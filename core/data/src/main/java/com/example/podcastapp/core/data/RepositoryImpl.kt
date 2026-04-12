@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class PodcastRepositoryImpl(
     private val podcastDao: PodcastDao,
@@ -141,41 +142,27 @@ class WaveformRepositoryImpl(
     private val waveformDao: WaveformDao,
 ) : WaveformRepository {
 
-    override suspend fun getWaveform(episodeId: Long): List<Float>? {
+    override suspend fun getWaveform(episodeId: Long): FloatArray? {
         val entity = waveformDao.getByEpisodeId(episodeId) ?: return null
         if (entity.barsBlob.isEmpty()) return null
 
-        // Decode: ByteArray (BLOB) → FloatArray → List<Float>
-        val buffer = ByteBuffer.wrap(entity.barsBlob)
-        val floatArray = FloatArray(buffer.remaining() / 4)
-        buffer.asFloatBuffer().get(floatArray)
-
-        val bars = floatArray.toList().map { it.coerceIn(0f, 1f) }
-        // 如果解析出来是空的，返回null让它重新生成
-        return bars.ifEmpty { null }
+        return decodeWaveform(entity.barsBlob)
     }
 
-    override fun observeWaveform(episodeId: Long): Flow<List<Float>?> {
+    override fun observeWaveform(episodeId: Long): Flow<FloatArray?> {
         return waveformDao.observeByEpisodeId(episodeId).map { entity ->
-            if (entity == null || entity.barsBlob.isEmpty()) return@map null
-
-            // Decode: ByteArray (BLOB) → FloatArray → List<Float>
-            val buffer = ByteBuffer.wrap(entity.barsBlob)
-            val floatArray = FloatArray(buffer.remaining() / 4)
-            buffer.asFloatBuffer().get(floatArray)
-
-            val bars = floatArray.toList().map { it.coerceIn(0f, 1f) }
-            bars.ifEmpty { null }
-        }.distinctUntilChanged()
+            if (entity == null || entity.barsBlob.isEmpty()) {
+                null
+            } else {
+                decodeWaveform(entity.barsBlob)
+            }
+        }
     }
 
-    override suspend fun saveWaveform(episodeId: Long, bars: List<Float>) {
-        // Encode: List<Float> → FloatArray → ByteBuffer → ByteArray (BLOB)
-        val normalizedBars = bars.map { it.coerceIn(0f, 1f) }
-        val floatArray = normalizedBars.toFloatArray()
-        val buffer = ByteBuffer.allocate(floatArray.size * 4)
-        buffer.asFloatBuffer().put(floatArray)
-        val bytes = buffer.array()
+    override suspend fun saveWaveform(episodeId: Long, bars: FloatArray) {
+        if (bars.isEmpty()) return
+
+        val bytes = encodeWaveform(bars)
 
         waveformDao.upsert(
             EpisodeWaveformEntity(
@@ -184,6 +171,31 @@ class WaveformRepositoryImpl(
                 updatedAt = System.currentTimeMillis(),
             )
         )
+    }
+
+    // ==========================================
+    // 极速编解码工具：原生内存操作，不产生任何 List
+    // ==========================================
+
+    private fun decodeWaveform(blob: ByteArray): FloatArray {
+        // 使用 nativeOrder() 保证跨平台/C++底层一致性
+        val buffer = ByteBuffer.wrap(blob).order(ByteOrder.nativeOrder())
+        val floatArray = FloatArray(buffer.remaining() / 4)
+        buffer.asFloatBuffer().get(floatArray)
+
+        return floatArray
+    }
+
+    private fun encodeWaveform(bars: FloatArray): ByteArray {
+        val buffer = ByteBuffer.allocate(bars.size * 4).order(ByteOrder.nativeOrder())
+        val floatBuffer = buffer.asFloatBuffer()
+
+        // 写库时保证合法性：直接在这个唯一的遍历里执行约束并写入 Buffer
+        for (v in bars) {
+            floatBuffer.put(if (v < 0f) 0f else if (v > 1f) 1f else v)
+        }
+
+        return buffer.array()
     }
 }
 

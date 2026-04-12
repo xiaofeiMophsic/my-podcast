@@ -4,45 +4,64 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.linc.amplituda.Amplituda
+import com.linc.amplituda.AmplitudaProgressListener
 import com.linc.amplituda.Cache
+import com.linc.amplituda.Compress
+import com.linc.amplituda.ProgressOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
+import kotlin.time.measureTimedValue
 
 class WaveformGenerator(
     private val context: Context,
 ) {
     private val amplituda: Amplituda by lazy { Amplituda(context) }
 
-    suspend fun generate(uri: Uri, maxBars: Int = DEFAULT_MAX_BARS): List<Float> = withContext(Dispatchers.IO) {
-        val (source, tempFile) = resolveSource(uri) ?: return@withContext emptyList()
+    suspend fun generate(uri: Uri, maxBars: Int = DEFAULT_MAX_BARS): FloatArray = withContext(Dispatchers.IO) {
+        val (source, tempFile) = resolveSource(uri) ?: return@withContext floatArrayOf()
         try {
             val durationMs = extractDurationMs(uri, source)
             val targetBars = if (maxBars > 0) maxBars else computeTargetBars(durationMs)
             val amplitudes = process(source)
-            if (amplitudes.isEmpty()) return@withContext emptyList()
-            val normalized = normalize2(amplitudes)
-            downsample(normalized, targetBars)
+            if (amplitudes.isEmpty()) return@withContext floatArrayOf()
+
+            val sampleData =
+                measureTimedValue { downsampleAndNormalize(amplitudes, targetBars) }
+            Timber.d("Downsampled in ${sampleData.duration}")
+            sampleData.value
         } catch (e: Throwable) {
-            // Amplituda can crash with ArrayIndexOutOfBoundsException for remote URLs
-            // Return empty list to indicate failure
-            emptyList()
+            floatArrayOf()
         } finally {
             tempFile?.delete()
         }
     }
 
     private suspend fun process(source: String): List<Int> {
-        val output = amplituda.processAudio(source, Cache.withParams(Cache.REUSE))
+        val debugListener = object : AmplitudaProgressListener() {
+            override fun onProgress(p0: ProgressOperation?, p1: Int) {}
+
+            override fun onStartProgress() {
+                Timber.d("onStart generate wave")
+            }
+
+            override fun onStopProgress() {
+                Timber.d("onStop generate wave")
+            }
+
+        }
+        val output = amplituda.processAudio(source, Compress.withParams(1, 1), Cache.withParams(Cache.REUSE), debugListener)
         return suspendCancellableCoroutine { cont ->
             output.get(
-                { result -> cont.resume(result.amplitudesAsList()) },
+                { result -> cont.resume(result.amplitudesAsList()); },
                 { error -> cont.resumeWithException(error) }
             )
         }
@@ -98,72 +117,67 @@ class WaveformGenerator(
         return bars.coerceIn(MIN_BARS, MAX_BARS)
     }
 
-    private fun normalize(values: List<Int>): List<Float> {
-        val maxVal = values.maxOrNull()?.toFloat() ?: 0f
-        if (maxVal <= 0f) return List(values.size) { 0f }
+    fun downsampleAndNormalize(values: List<Int>, targetBars: Int): FloatArray {
+        if (values.isEmpty() || targetBars <= 0) return FloatArray(0)
 
-        return values.map { v ->
-            // 使用根号或者 Math.pow 提升低振幅部分的视觉存在感（类似对数压缩）
-            val norm = (v / maxVal).coerceIn(0f, 1f)
-//            Math.sqrt(norm.toDouble()).toFloat()
-            norm.toDouble().pow(2.0).toFloat()
-        }
-    }
+        val actualBars = min(values.size, targetBars)
+        val result = FloatArray(actualBars)
 
-    private fun normalize2(values: List<Int>): List<Float> {
-        val rawValues = values.map { it.toFloat() }
+        // 降采样产生的中间结果很少（比如4000个），这里自己用基本类型数组可以保证速度
+        val rawDownsampled = IntArray(actualBars)
+        val bucketSize = values.size.toDouble() / actualBars
 
-        // 方案 A（最稳健）：计算全局均方根 (RMS)，并以此作为基准
-        // 这个方案能非常好地解决由于现代录音压缩导致所有值都挤在顶部的问题。
-        val sumSq = rawValues.sumOf { (it * it).toDouble() }
-        val rms = if (values.isNotEmpty()) {
-            sqrt(sumSq / values.size).toFloat()
-        } else 0f
+        var globalSumSq = 0L // 使用 Long 避免 Int 溢出
+        var globalMaxInt = 0
 
-        if (rms <= 0f) return List(values.size) { 0f }
-
-        // 使用非线性 Gamma 函数（类似于 Sqrt，但更好）拉伸动态范围
-        // 我们让高度低于 RMS 的柱子在视觉上增长，高于 RMS 的柱子增长平缓。
-        // 这能在高的柱子之间制造明显的低谷，拉开对比度。
-        return rawValues.map { v ->
-            // 使用一个基准系数，确保高的依然是最高，低的被压平
-            val reference = maxOf(rms, rawValues.maxOrNull() ?: 1f)
-            val norm = (v / reference).coerceIn(0f, 1f)
-
-            // --- 核心修改： Gamma 矫正 ---
-            // 指数越小（如 0.5 甚至 0.3），低的放大越多，整体看起来越平滑但有变化
-            // 指数越大（如 1.2 甚至 1.5），高低对比越强烈
-            // 建议尝试 0.618F（黄金比例，视觉上最舒适）
-            Math.pow(norm.toDouble(), 0.618).toFloat()
-        }
-    }
-
-    // 2. 采样：改用 RMS（均方根）或 Max（最大值）
-    private fun downsample(values: List<Float>, maxBars: Int): List<Float> {
-        if (values.size <= maxBars) return values
-
-        val bucketSize = values.size.toFloat() / maxBars
-        return (0 until maxBars).map { i ->
+        // ==========================================
+        // 第一步：一趟扫描 List (每个元素只访问 1 次)
+        // ==========================================
+        for (i in 0 until actualBars) {
             val start = (i * bucketSize).toInt()
             val end = ((i + 1) * bucketSize).toInt().coerceAtMost(values.size)
-            val slice = values.subList(start, maxOf(start + 1, end))
 
-            // --- 核心修改：取最大值而不是平均值 ---
-            // 最大值能保留音频的“骨架”和瞬态，让波形看起来更有力
-            val barValue = slice.maxOrNull() ?: 0f
+            var bucketMaxInt = 0
 
-            val threshold = 0.15f // 低于 15% 的振幅将被视为“噪音”压低
-            val finalValue = if (barValue < threshold) {
-                // 低于阈值：给一个极小的保底（0.01），制造完全塌陷感
+            for (j in start until end) {
+                // 这里发生了唯一一次从 List 中 GET 元素和拆箱(Unboxing)
+                val v = values[j]
+
+                // 累加平方和与求极值
+                globalSumSq += v.toLong() * v.toLong()
+
+                if (v > globalMaxInt) globalMaxInt = v
+                if (v > bucketMaxInt) bucketMaxInt = v
+            }
+            rawDownsampled[i] = bucketMaxInt
+        }
+
+        // ==========================================
+        // 第二步：循环结束，开始做浮点和视觉计算
+        // ==========================================
+        val globalMax = globalMaxInt.toFloat()
+        val rms = sqrt(globalSumSq.toDouble() / values.size).toFloat()
+        val reference = max(rms, if (globalMax > 0f) globalMax else 1f)
+
+        val threshold = 0.15f
+
+        for (i in 0 until actualBars) {
+            val rawBar = rawDownsampled[i].toFloat()
+
+            val norm = (rawBar / reference).coerceIn(0f, 1f)
+            val gammaCorrected = norm.pow(0.618f)
+
+            val finalValue = if (gammaCorrected < threshold) {
                 0.01f
             } else {
-                // 高于阈值：在线性基础上做一个动态增强，让它更“挺拔”
-                // 将 [threshold, 1.0] 的范围重新映射到 [0.1, 1.0]
-                val mapped = 0.1f + (barValue - threshold) * (1f - 0.1f) / (1f - threshold)
+                val mapped = 0.1f + (gammaCorrected - threshold) * (1f - 0.1f) / (1f - threshold)
                 mapped.coerceIn(0.1f, 1f)
             }
-            finalValue
+
+            result[i] = finalValue
         }
+
+        return result
     }
 
     private companion object {

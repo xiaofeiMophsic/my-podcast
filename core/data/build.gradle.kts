@@ -33,4 +33,6 @@ dependencies {
     ksp(libs.hilt.compiler)
 //    kapt(libs.hilt.compiler)
     ksp(libs.hilt.androidx.compiler)
+
+    api(libs.timber)
 }

@@ -11,6 +11,7 @@ import com.example.podcastapp.core.media.PlayerController
 import com.example.podcastapp.core.media.PlayerState
 import com.example.podcastapp.core.ui.utils.htmlToAnnotatedString
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -27,6 +31,7 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val controller: PlayerController,
@@ -53,28 +58,33 @@ class PlayerViewModel @Inject constructor(
     val playingState = playerState.map { it.isPlaying }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    private val _waveformBars = MutableStateFlow<List<WaveBar>>(emptyList())
-    val waveformBars: StateFlow<List<WaveBar>> = _waveformBars.asStateFlow()
+    private val _waveformBars = MutableStateFlow(floatArrayOf())
+    val waveformBars: StateFlow<FloatArray> = _waveformBars.asStateFlow()
 
     private val _isGeneratingWaveform = MutableStateFlow(true)
     val isGeneratingWaveform: StateFlow<Boolean> = _isGeneratingWaveform.asStateFlow()
 
     // Observe waveform changes when current episode changes
     init {
-        playerState.map { it.episodeId }.distinctUntilChanged().onEach { episodeId ->
-            if (episodeId == null) {
-                _waveformBars.value = emptyList()
-                _isGeneratingWaveform.value = false
-            } else {
-                // Start observing waveform from database
-                waveformRepository.observeWaveform(episodeId)
-                    .distinctUntilChanged()
-                    .collect { bars ->
-                        _waveformBars.value = bars.orEmpty().map { WaveBar(it) }
-                        _isGeneratingWaveform.value = bars == null
-                    }
+        playerState
+            .map { it.episodeId }
+            .distinctUntilChanged()
+            .flatMapLatest { episodeId ->
+                if (episodeId == null) {
+                    flowOf(null) // 发射一个 null 代表没剧集
+                } else {
+                    waveformRepository.observeWaveform(episodeId)
+                }
             }
-        }.launchIn(viewModelScope)
+            .onEach { bars -> // 使用 collectLatest 确保最新的 UI 更新
+                if (bars == null) {
+                    _waveformBars.value = floatArrayOf()
+                    _isGeneratingWaveform.value = true // 正在生成（数据库还没存入）
+                } else {
+                    _waveformBars.value = bars
+                    _isGeneratingWaveform.value = false // 生成结束
+                }
+            }.launchIn(viewModelScope)
     }
 
     private val _episodeDetail = MutableStateFlow(NowPlayingEpisodeDetail())

@@ -177,7 +177,7 @@ fun NowPlayingScreen(
     isPlaying: () -> Boolean,
     durationMs: Long,
     progress: () -> Float,
-    waveformBars: List<WaveBar>,
+    waveformBars: FloatArray,
     detail: NowPlayingEpisodeDetail,
     onBack: () -> Unit,
     onOpenDownloads: () -> Unit,

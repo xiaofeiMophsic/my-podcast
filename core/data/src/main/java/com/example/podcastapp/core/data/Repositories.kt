@@ -40,9 +40,9 @@ interface DownloadRepository {
 }
 
 interface WaveformRepository {
-    suspend fun getWaveform(episodeId: Long): List<Float>?
-    fun observeWaveform(episodeId: Long): Flow<List<Float>?>
-    suspend fun saveWaveform(episodeId: Long, bars: List<Float>)
+    suspend fun getWaveform(episodeId: Long): FloatArray?
+    fun observeWaveform(episodeId: Long): Flow<FloatArray?>
+    suspend fun saveWaveform(episodeId: Long, bars: FloatArray)
 }
 
 interface SearchHistoryRepository {

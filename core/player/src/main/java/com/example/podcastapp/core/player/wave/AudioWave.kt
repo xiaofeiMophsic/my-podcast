@@ -27,7 +27,7 @@ import kotlin.random.Random
 
 @Composable
 fun AudioWaveform(
-    waveformBars: List<WaveBar>,
+    waveformBars: FloatArray,
     progress: () -> Float,
     onSeekTo: (Float) -> Unit,
     onScrub: (Float) -> Unit,
@@ -97,7 +97,7 @@ fun AudioWaveform(
         waveformBars.forEachIndexed { index, bar ->
             val absoluteX = index * (barWidthPx + spacingPx)
             val x = absoluteX + offsetX
-            val barH = (bar.height * maxHeightPx * 1.2f).coerceAtMost(maxHeightPx)
+            val barH = (bar * maxHeightPx * 1.2f).coerceAtMost(maxHeightPx)
             val y = (maxHeightPx - barH) / 2f
             // 计算当前这条 Bar 的左右边界（相对于音频总长度的绝对坐标）
             val barLeft = absoluteX
