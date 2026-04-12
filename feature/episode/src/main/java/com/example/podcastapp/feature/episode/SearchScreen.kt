@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.podcastapp.core.database.EpisodeEntity
@@ -131,7 +133,7 @@ fun SearchScreen(
     onQueryChange: (String) -> Unit,
     onClearHistory: () -> Unit,
     history: List<String>,
-    results: androidx.paging.compose.LazyPagingItems<EpisodeEntity>,
+    results: LazyPagingItems<EpisodeEntity>,
     onEpisodeClick: (Long) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -143,14 +145,18 @@ fun SearchScreen(
         keyboardController?.show()
     }
 
-    Box(modifier = Modifier.fillMaxSize().padding(bottom = 8.dp).background(NeoColors.ScreenBg)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NeoColors.ScreenBg)
+            .padding(horizontal = 24.dp)
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
             NeoTopBar(title = "Search", onBack = onBack)
-
+            Spacer(modifier = Modifier.height(10.dp))
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 8.dp),
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 NeoTextField(

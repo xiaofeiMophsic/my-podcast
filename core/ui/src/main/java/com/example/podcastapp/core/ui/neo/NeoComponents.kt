@@ -5,23 +5,24 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -51,52 +52,54 @@ fun ShadowCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NeoTopBar(
     title: String,
-    onBack: (() -> Unit)? = null,
-    action: (@Composable () -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
+    action: @Composable RowScope.() -> Unit = {},
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 18.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (onBack != null) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(36.dp)) {
+
+    CenterAlignedTopAppBar(
+        title = { NeoTitle(title) },
+        modifier = modifier,
+        actions = action,
+        navigationIcon = {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .clickable { onBack() },
+            ) {
                 Image(
                     painter = painterResource(R.drawable.ic_back),
                     contentDescription = "Back"
                 )
             }
-        } else {
-            Spacer(modifier = Modifier.size(36.dp))
-        }
+        },
+        colors = TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Transparent)
+    )
+}
 
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f),
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = NeoColors.TextPrimary,
-        )
-
-        if (action != null) {
-            action()
-        } else {
-            Spacer(modifier = Modifier.width(36.dp))
-        }
-    }
+@Composable
+private fun NeoTitle(title: String) {
+    Text(
+        text = title,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        color = NeoColors.TextPrimary,
+        maxLines = 1,
+    )
 }
 
 @Composable
 fun NeoPrimaryButton(
     text: String,
     onClick: () -> Unit,
-    enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val bg = if (enabled) NeoColors.Ink else NeoColors.NavBorder
     Surface(
@@ -122,8 +125,8 @@ fun NeoPrimaryButton(
 fun NeoOutlineButton(
     text: String,
     onClick: () -> Unit,
-    enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val border = if (enabled) NeoColors.CardBorder else NeoColors.NavBorder
     Surface(

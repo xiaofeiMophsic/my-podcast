@@ -186,7 +186,7 @@ private fun PlayProgressText(durationMs: Long, progressMs: () -> Long) {
         }
     }
 
-    val displayText by remember {
+    val displayText by remember(durationMs) {
         derivedStateOf {
             val currentStr = progressSeconds.seconds.toPlaybackString()
             val totalStr = durationMs.milliseconds.toPlaybackString()
