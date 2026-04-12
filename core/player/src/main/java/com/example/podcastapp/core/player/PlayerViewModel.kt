@@ -35,7 +35,7 @@ class PlayerViewModel @Inject constructor(
     private val waveformRepository: com.example.podcastapp.core.data.WaveformRepository,
 ) : ViewModel() {
 
-    val playerState: StateFlow<PlayerState> = controller.state
+    private val playerState: StateFlow<PlayerState> = controller.state
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlayerState())
 
     val metadataState = playerState.map {
@@ -46,10 +46,12 @@ class PlayerViewModel @Inject constructor(
             durationMs = it.durationMs,
             episodeId = it.episodeId,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MetadataState())
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MetadataState())
 
-    val progressState = playerState.map { it.positionMs }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-    val playingState = playerState.map { it.isPlaying }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val progressState = playerState.map { it.positionMs }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    val playingState = playerState.map { it.isPlaying }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _waveformBars = MutableStateFlow<List<WaveBar>>(emptyList())
     val waveformBars: StateFlow<List<WaveBar>> = _waveformBars.asStateFlow()

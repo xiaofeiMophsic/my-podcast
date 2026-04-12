@@ -9,13 +9,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -95,21 +103,28 @@ fun HomeScreen(
 ) {
     Scaffold(
         bottomBar = {
-            Column {
+            Column(
+                modifier = Modifier
+                    .background(Color.White)
+                    .navigationBarsPadding()
+            ) {
                 GlobalMiniPlayerBar(onPlayListClick = onPlayListClick)
                 HomeBottomNav(onSearchClick = onSearchClick, onAddRssClick = onAddRssClick)
             }
         },
         containerColor = NeoColors.ScreenBg,
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(bottom = innerPadding.calculateBottomPadding())
                     .verticalScroll(rememberScrollState()),
             ) {
-                HomeHeader()
+                HomeHeader(Modifier.statusBarsPadding())
 
                 Column(
                     modifier = Modifier.padding(vertical = 15.dp),
@@ -247,12 +262,11 @@ private fun EpisodeCard(
 
 // ─── Header ───────────────────────────────────────────────────────────────
 @Composable
-private fun HomeHeader() {
+private fun HomeHeader(modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 25.dp)
-            .padding(top = 54.dp, bottom = 16.dp),
     ) {
         Column(
             modifier = Modifier.align(Alignment.CenterStart),
@@ -318,7 +332,7 @@ private fun HomeHeader() {
 // ─── Search Bar ───────────────────────────────────────────────────────────────
 @Composable
 private fun HomeSearchBar(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ShadowCard(modifier = modifier) {
+    ShadowCard(modifier = modifier.clickable{ onClick() }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -340,16 +354,6 @@ private fun HomeSearchBar(modifier: Modifier = Modifier, onClick: () -> Unit) {
                 textDecoration = TextDecoration.Underline,
             )
         }
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .offset(y = (-52).dp)
-            .height(52.dp)
-            .background(Color.Transparent)
-            .clickable { onClick() }
-    ) {
-        Spacer(modifier = Modifier.fillMaxSize())
     }
 }
 

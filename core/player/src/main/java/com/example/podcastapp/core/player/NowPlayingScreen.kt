@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.podcastapp.feature.player.R
 import com.example.podcastapp.core.ui.neo.ShadowCard
@@ -111,13 +112,13 @@ fun NowPlayingRoute(
     onOpenDownloads: () -> Unit = {},
     viewModel: PlayerViewModel = hiltViewModel(LocalContext.current as ComponentActivity),
 ) {
-    val state by viewModel.metadataState.collectAsState()
-    val detail by viewModel.episodeDetail.collectAsState()
-    val isGenerating by viewModel.isGeneratingWaveform.collectAsState()
-    val waveformBars by viewModel.waveformBars.collectAsState()
+    val state by viewModel.metadataState.collectAsStateWithLifecycle()
+    val detail by viewModel.episodeDetail.collectAsStateWithLifecycle()
+    val isGenerating by viewModel.isGeneratingWaveform.collectAsStateWithLifecycle()
+    val waveformBars by viewModel.waveformBars.collectAsStateWithLifecycle()
 
-    val playingState = viewModel.playingState.collectAsState()
-    val progressState = viewModel.progressState.collectAsState()
+    val playingState = viewModel.playingState.collectAsStateWithLifecycle()
+    val progressState = viewModel.progressState.collectAsStateWithLifecycle()
 
     LaunchedEffect(targetEpisodeId) {
         targetEpisodeId?.let { viewModel.playEpisodeById(it) }

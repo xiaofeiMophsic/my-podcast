@@ -31,7 +31,6 @@ import androidx.paging.compose.itemKey
 import coil.compose.AsyncImage
 import com.example.podcastapp.core.database.DownloadStatus
 import com.example.podcastapp.core.database.EpisodeEntity
-import com.example.podcastapp.core.player.MiniPlayer
 import com.example.podcastapp.core.ui.neo.NeoColors
 import com.example.podcastapp.core.ui.neo.NeoShapes
 import com.example.podcastapp.core.ui.neo.NeoTopBar
@@ -87,11 +86,6 @@ fun EpisodeListScreen(
                 }
             }
         }
-
-        MiniPlayer(
-            onTogglePlay = { /* handled internally */ },
-            onSeek = { /* handled internally */ },
-        )
     }
 }
 
