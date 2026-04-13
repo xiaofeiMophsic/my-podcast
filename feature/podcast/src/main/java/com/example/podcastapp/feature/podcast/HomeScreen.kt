@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -39,8 +38,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.podcastapp.core.database.EpisodeEntity
-import com.example.podcastapp.core.player.GlobalMiniPlayerBar
-import com.example.podcastapp.core.ui.neo.NeoBottomNav
 import com.example.podcastapp.core.ui.neo.NeoColors
 import com.example.podcastapp.core.ui.neo.ShadowCard
 
@@ -83,111 +80,70 @@ private const val NAV_SEARCH =
 
 @Composable
 fun HomeRoute(
-    onSearchClick: () -> Unit = {},
     onPlayerClick: (episodeId: Long) -> Unit = {},
     onAddRssClick: () -> Unit = {},
-    onPlayListClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     HomeScreen(
         state = state,
-        onSearchClick = onSearchClick,
         onAddRssClick = onAddRssClick,
         onEpisodeClick = { episode ->
-//            viewModel.playEpisode(episode)
             onPlayerClick(episode.id)
         },
-        onPlayListClick = onPlayListClick,
-        onPlayerClick = onPlayerClick,
     )
 }
 
 @Composable
 fun HomeScreen(
     state: HomeUiState,
-    onSearchClick: () -> Unit = {},
     onAddRssClick: () -> Unit = {},
     onEpisodeClick: (EpisodeEntity) -> Unit = {},
-    onPlayListClick: () -> Unit = {},
-    onPlayerClick: (episodeId: Long) -> Unit = {},
 ) {
-    Scaffold(
-        bottomBar = {
-            Column {
-                GlobalMiniPlayerBar(
-                    onPlayListClick = onPlayListClick,
-                    onPlayerClick = onPlayerClick,
-                )
-
-
-                // todo 移动到其他地方
-                // 重构 app 导航模块
-                NeoBottomNav(
-                    items = listOf(),
-                    selectedItemId = "home",
-                    onItemClick = { item ->
-                        when (item.id) {
-                            "home" -> {}
-                            "explore" -> onAddRssClick()
-                            "favourites" -> {}
-                            "search" -> onSearchClick()
-                        }
-                    },
-//                    modifier = Modifier.navigationBarsPadding()
-                )
-//                HomeBottomNav(onSearchClick = onSearchClick, onAddRssClick = onAddRssClick)
-            }
-        },
-        containerColor = NeoColors.ScreenBg,
-    ) { innerPadding ->
-        Box(
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
         ) {
+            HomeHeader(Modifier.statusBarsPadding())
+
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = innerPadding.calculateBottomPadding())
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.padding(vertical = 15.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                HomeHeader(Modifier.statusBarsPadding())
+                HomeSearchBar(
+                    modifier = Modifier
+                        .padding(horizontal = 25.dp)
+                        .fillMaxWidth(),
+                    onClick = { /* Search is now a top-level tab */ },
+                )
 
-                Column(
-                    modifier = Modifier.padding(vertical = 15.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                ) {
-                    HomeSearchBar(
-                        modifier = Modifier
-                            .padding(horizontal = 25.dp)
-                            .fillMaxWidth(),
-                        onClick = onSearchClick,
-                    )
-
-                    if (state.sections.isEmpty()) {
-                        EmptySubscriptionsHint(onClick = onAddRssClick)
-                    } else {
-                        state.sections.forEach { section ->
-                            PodcastSectionBlock(
-                                section = section,
-                                onEpisodeClick = onEpisodeClick,
-                            )
-                        }
+                if (state.sections.isEmpty()) {
+                    EmptySubscriptionsHint(onClick = onAddRssClick)
+                } else {
+                    state.sections.forEach { section ->
+                        PodcastSectionBlock(
+                            section = section,
+                            onEpisodeClick = onEpisodeClick,
+                        )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
-            }
 
-            AsyncImage(
-                model = IMG_DOTS_DECO,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(width = 61.dp, height = 53.dp)
-                    .align(Alignment.TopEnd)
-                    .padding(end = 16.dp, top = 4.dp),
-            )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
+
+        AsyncImage(
+            model = IMG_DOTS_DECO,
+            contentDescription = null,
+            modifier = Modifier
+                .size(width = 61.dp, height = 53.dp)
+                .align(Alignment.TopEnd)
+                .padding(end = 16.dp, top = 4.dp),
+        )
     }
 }
 

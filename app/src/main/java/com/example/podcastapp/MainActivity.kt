@@ -10,22 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.example.podcastapp.core.player.NowPlayingRoute
-import com.example.podcastapp.feature.download.DownloadRoute
-import com.example.podcastapp.feature.episode.EpisodeDetailRoute
-import com.example.podcastapp.feature.episode.EpisodeListRoute
-import com.example.podcastapp.feature.episode.SearchRoute
-import com.example.podcastapp.feature.podcast.AddRssRoute
-import com.example.podcastapp.feature.podcast.HomeRoute
-import com.example.podcastapp.feature.podcast.PodcastListRoute
-import com.example.podcastapp.navigation.NavRoutes
 import com.example.podcastapp.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 

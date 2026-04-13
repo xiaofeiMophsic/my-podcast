@@ -1,9 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.hilt)
-//    alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.legacy.kapt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -61,6 +61,7 @@ dependencies {
     implementation(project(":feature:podcast"))
     implementation(project(":feature:episode"))
     implementation(project(":feature:download"))
+    implementation(project(":core:navigation"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.activity.compose)
@@ -75,7 +76,10 @@ dependencies {
     // Provide Android Material Components (MDC) resources so Theme.Material3.* styles exist
     implementation(libs.google.material)
 
-    implementation(libs.navigation.compose)
+    implementation(libs.navigation3.runtime)
+    implementation(libs.navigation3.ui)
+    implementation(libs.lifecycle.viewmodel.navigation3)
+    implementation(libs.kotlin.serialization.json)
 
     implementation(libs.hilt.android)
     implementation(libs.hilt.work)

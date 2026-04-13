@@ -1,106 +1,108 @@
 package com.example.podcastapp
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.example.podcastapp.core.player.NowPlayingRoute
-import com.example.podcastapp.core.ui.R
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
+import com.example.podcastapp.core.navigation.HomeNavKey
+import com.example.podcastapp.core.navigation.Navigator
+import com.example.podcastapp.core.navigation.navigateToNowPlaying
+import com.example.podcastapp.core.navigation.rememberNavigationState
+import com.example.podcastapp.core.navigation.toEntries
+import com.example.podcastapp.core.player.GlobalMiniPlayerBar
+import com.example.podcastapp.core.ui.neo.NeoBottomNav
+import com.example.podcastapp.core.ui.neo.NeoColors
 import com.example.podcastapp.core.ui.neo.NeoNavItem
-import com.example.podcastapp.feature.download.DownloadRoute
-import com.example.podcastapp.feature.episode.EpisodeDetailRoute
-import com.example.podcastapp.feature.episode.EpisodeListRoute
-import com.example.podcastapp.feature.episode.SearchRoute
-import com.example.podcastapp.feature.podcast.AddRssRoute
-import com.example.podcastapp.feature.podcast.HomeRoute
-import com.example.podcastapp.feature.podcast.PodcastListRoute
-import com.example.podcastapp.navigation.NavRoutes
+import com.example.podcastapp.core.ui.neo.LocalSnackbarHostState
+import com.example.podcastapp.navigation.TOP_LEVEL_NAV_ITEMS
+import com.example.podcastapp.navigation.addRssEntry
+import com.example.podcastapp.navigation.downloadEntry
+import com.example.podcastapp.navigation.episodeDetailEntry
+import com.example.podcastapp.navigation.episodeListEntry
+import com.example.podcastapp.navigation.exploreEntry
+import com.example.podcastapp.navigation.favouritesEntry
+import com.example.podcastapp.navigation.homeEntry
+import com.example.podcastapp.navigation.nowPlayingEntry
+import com.example.podcastapp.navigation.searchEntry
 
 @Composable
-private fun AppRoot() {
-
-    val NavItems = listOf(
-        NeoNavItem(
-            stringResource(R.string.nav_home), R.drawable.nav_home, "home"),
-        NeoNavItem(
-            stringResource(R.string.nav_explore), R.drawable.nav_explore, "explore"
-        ), NeoNavItem(
-            stringResource(R.string.nav_favourites), R.drawable.nav_like, "favourites"
-        ), NeoNavItem(
-            stringResource(R.string.nav_search), R.drawable.nav_setting, "search"
-        )
+fun AppRoot() {
+    val navigationState = rememberNavigationState(
+        startKey = HomeNavKey,
+        topLevelKeys = TOP_LEVEL_NAV_ITEMS.keys,
     )
+    val navigator = remember { Navigator(navigationState) }
 
-    val navController = rememberNavController()
+    val isTopLevel by remember {
+        derivedStateOf { navigationState.currentKey in navigationState.topLevelKeys }
+    }
 
-    NavHost(navController = navController, startDestination = NavRoutes.HOME) {
-        composable(NavRoutes.HOME) {
-            HomeRoute(
-                onSearchClick = { navController.navigate(NavRoutes.SEARCH) },
-                onPlayerClick = { episodeId -> navController.navigate(NavRoutes.nowPlayingRoute(episodeId)) },
-                onAddRssClick = { navController.navigate(NavRoutes.ADD_RSS) },
-            )
-        }
-        composable(
-            route = "${NavRoutes.NOW_PLAYING}?${NavRoutes.ARG_TARGET_EPISODE_ID}={${NavRoutes.ARG_TARGET_EPISODE_ID}}",
-            arguments = listOf(
-                navArgument(NavRoutes.ARG_TARGET_EPISODE_ID) {
-                    type = NavType.LongType
-                    defaultValue = -1L
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Build NeoNavItem list from TOP_LEVEL_NAV_ITEMS (needs @Composable for stringResource)
+    val navItems = TOP_LEVEL_NAV_ITEMS.map { (_, item) ->
+        NeoNavItem(
+            label = stringResource(item.labelResId),
+            iconResId = item.iconResId,
+            id = item.id,
+        )
+    }
+
+    CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+        Scaffold(
+            bottomBar = {
+                if (isTopLevel) {
+                    Column {
+                        GlobalMiniPlayerBar(
+                            onPlayListClick = { /* TODO */ },
+                            onPlayerClick = { episodeId -> navigator.navigateToNowPlaying(episodeId) },
+                        )
+                        NeoBottomNav(
+                            items = navItems,
+                            selectedItemId = TOP_LEVEL_NAV_ITEMS[navigationState.currentTopLevelKey]?.id
+                                ?: "home",
+                            onItemClick = { item ->
+                                val navKey = TOP_LEVEL_NAV_ITEMS.entries
+                                    .firstOrNull { it.value.id == item.id }?.key
+                                if (navKey != null) navigator.navigate(navKey)
+                            },
+                        )
+                    }
                 }
-            ),
-        ) { backStackEntry ->
-            val targetEpisodeId = backStackEntry.arguments
-                ?.getLong(NavRoutes.ARG_TARGET_EPISODE_ID)
-                ?.takeIf { it > 0L }
-            NowPlayingRoute(
-                onBack = { navController.popBackStack() },
-                targetEpisodeId = targetEpisodeId,
-                onOpenDownloads = { navController.navigate(NavRoutes.DOWNLOADS) },
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = NeoColors.ScreenBg,
+        ) { padding ->
+            val entryProvider = entryProvider {
+                homeEntry(navigator)
+                exploreEntry(navigator)
+                favouritesEntry(navigator)
+                searchEntry(navigator)
+                nowPlayingEntry(navigator)
+                episodeListEntry(navigator)
+                episodeDetailEntry(navigator)
+                downloadEntry(navigator)
+                addRssEntry(navigator)
+            }
+
+            NavDisplay(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                entries = navigationState.toEntries(entryProvider),
+                onBack = { navigator.goBack() },
             )
-        }
-        composable(NavRoutes.PODCAST_LIST) {
-            PodcastListRoute(
-                onPodcastClick = { podcastId ->
-                    navController.navigate(NavRoutes.episodeListRoute(podcastId))
-                },
-                onSearchClick = { navController.navigate(NavRoutes.SEARCH) },
-                onDownloadsClick = { navController.navigate(NavRoutes.DOWNLOADS) },
-            )
-        }
-        composable(NavRoutes.SEARCH) {
-            SearchRoute(
-                onEpisodeClick = { episodeId ->
-                    navController.navigate(NavRoutes.nowPlayingRoute(episodeId))
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(NavRoutes.DOWNLOADS) {
-            DownloadRoute(onBack = { navController.popBackStack() })
-        }
-        composable(NavRoutes.ADD_RSS) {
-            AddRssRoute(onBack = { navController.popBackStack() })
-        }
-        composable(
-            route = "${NavRoutes.EPISODE_LIST}/{${NavRoutes.ARG_PODCAST_ID}}",
-            arguments = listOf(navArgument(NavRoutes.ARG_PODCAST_ID) { type = NavType.LongType }),
-        ) {
-            EpisodeListRoute(
-                onEpisodeClick = { episodeId ->
-                    navController.navigate(NavRoutes.episodeDetailRoute(episodeId))
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(
-            route = "${NavRoutes.EPISODE_DETAIL}/{${NavRoutes.ARG_EPISODE_ID}}",
-            arguments = listOf(navArgument(NavRoutes.ARG_EPISODE_ID) { type = NavType.LongType }),
-        ) {
-            EpisodeDetailRoute(onBack = { navController.popBackStack() })
         }
     }
 }
