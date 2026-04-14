@@ -1,5 +1,7 @@
 package com.example.podcastapp.core.player.wave
 
+import android.view.HapticFeedbackConstants
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -13,24 +15,28 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.example.podcastapp.core.ui.neo.NeoColors
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 @Composable
@@ -50,13 +56,22 @@ fun AudioWaveform(
     var localScrubFraction by remember { mutableStateOf<Float?>(null) }
     val currentPlaybackProgress by rememberUpdatedState(progress())
 
-    // 🚨 新增：用来在松手后冻结画面的“预期进度”
+    // 🚨 新增：用来在松手后冻结画面的”预期进度”
     var expectedSeekProgress by remember { mutableStateOf<Float?>(null) }
 
     // 🌟 新增特效 1/3：记录是否有手指按在屏幕上
     var isPressing by remember { mutableStateOf(false) }
 
-    // 只要是在按下，或者在拖拽，就是“交互中”
+    // 惯性滑动：Animatable + coroutine scope
+    val flingAnimatable = remember { Animatable(0f) }
+    val flingScope = rememberCoroutineScope()
+    val splineDecay = androidx.compose.foundation.gestures.rememberSplineBasedDecay<Float>()
+
+    // 震动反馈：追踪上一根经过的柱子索引
+    val view = LocalView.current
+    var lastHapticBarIndex by remember { mutableIntStateOf(-1) }
+
+    // 只要是在按下、拖拽、或惯性滑动中，就是”交互中”
     val isInteracting = isPressing || localScrubFraction != null
 
     // 🌟 核心特效引擎：带弹性阻尼的放大系数 (1.0倍 -> 1.15倍)
@@ -132,12 +147,21 @@ fun AudioWaveform(
                         )
                     }
 
-                    // 2. 监听水平拖拽手势 (Drag)：将手势位移转化为磁带拨动效果
+                    // 2. 监听水平拖拽手势 (Drag)：将手势位移转化为磁带拨动效果 + 惯性滑动
                     launch {
+                        val velocityTracker = VelocityTracker()
+
                         detectHorizontalDragGestures(
                             onDragStart = {
+                                // 取消正在进行的惯性滑动
+                                flingAnimatable.stop()
                                 // 刚按下去时，把当前画面停留的进度记录下来作为基准点
                                 localScrubFraction = latestRenderProgress
+                                lastHapticBarIndex = if (waveformBars.isNotEmpty()) {
+                                    (latestRenderProgress * waveformBars.size).toInt()
+                                        .coerceIn(0, waveformBars.size - 1)
+                                } else -1
+                                velocityTracker.resetTracking()
                                 onScrub(latestRenderProgress)
                             },
                             onHorizontalDrag = { change, dragAmount ->
@@ -147,27 +171,83 @@ fun AudioWaveform(
                                 val totalWidth =
                                     totalBars * barWidthPx + (totalBars - 1) * spacingPx
 
-                                // 【核心推导】：
-                                // dragAmount 是手指滑动的像素差。小于 0 说明手指向左滑。
-                                // 向左拨动波形 = 当前点位变向未来 = 快进。
-                                // 所以波形平移量与进度增加量互为相反数，除以总长换算成 fraction。
+                                // 记录速度用于惯性滑动
+                                velocityTracker.addPosition(
+                                    change.uptimeMillis,
+                                    change.position
+                                )
+
                                 val deltaProgress = -dragAmount / totalWidth
 
                                 localScrubFraction?.let { current ->
                                     val newProgress = (current + deltaProgress).coerceIn(0f, 1f)
                                     localScrubFraction = newProgress
-                                    onScrub(newProgress) // 回传给外部更新 UI 文本
+                                    onScrub(newProgress)
+
+                                    // 震动反馈：每划过一根柱子轻微震动
+                                    val currentBarIndex = (newProgress * totalBars).toInt()
+                                        .coerceIn(0, totalBars - 1)
+                                    if (currentBarIndex != lastHapticBarIndex) {
+                                        lastHapticBarIndex = currentBarIndex
+                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                    }
                                 }
                             },
                             onDragEnd = {
-                                localScrubFraction?.let {
-                                    expectedSeekProgress = it
-                                    onSeekTo(it)
-                                } // 抬手，真的触发播放器 Seek
-                                localScrubFraction = null
-                                onScrubEnd()
+                                val currentFraction = localScrubFraction ?: return@detectHorizontalDragGestures
+                                val totalBars = waveformBars.size
+                                if (totalBars == 0) {
+                                    localScrubFraction = null
+                                    onScrubEnd()
+                                    return@detectHorizontalDragGestures
+                                }
+                                val totalWidth = totalBars * barWidthPx + (totalBars - 1) * spacingPx
+
+                                // 获取手指抬起时的像素速度，转换为 progress/秒
+                                val pixelVelocity = velocityTracker.calculateVelocity().x
+                                val progressVelocity = -pixelVelocity / totalWidth
+
+                                // 如果速度很小，直接 seek 不做惯性
+                                if (kotlin.math.abs(progressVelocity) < 0.05f) {
+                                    expectedSeekProgress = currentFraction
+                                    onSeekTo(currentFraction)
+                                    localScrubFraction = null
+                                    onScrubEnd()
+                                    return@detectHorizontalDragGestures
+                                }
+
+                                // 启动惯性滑动动画
+                                flingScope.launch {
+                                    flingAnimatable.snapTo(currentFraction)
+                                    flingAnimatable.updateBounds(lowerBound = 0f, upperBound = 1f)
+
+                                    flingAnimatable.animateDecay(
+                                        initialVelocity = progressVelocity,
+                                        animationSpec = splineDecay,
+                                    ) {
+                                        localScrubFraction = value
+                                        onScrub(value)
+
+                                        // 惯性滑动中也触发震动
+                                        val barIndex = (value * totalBars).toInt()
+                                            .coerceIn(0, totalBars - 1)
+                                        if (barIndex != lastHapticBarIndex) {
+                                            lastHapticBarIndex = barIndex
+                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        }
+                                    }
+
+                                    // 惯性结束，触发真正的 seek
+                                    localScrubFraction?.let {
+                                        expectedSeekProgress = it
+                                        onSeekTo(it)
+                                    }
+                                    localScrubFraction = null
+                                    onScrubEnd()
+                                }
                             },
                             onDragCancel = {
+                                flingAnimatable.stop()
                                 localScrubFraction = null
                                 onScrubEnd()
                             }
